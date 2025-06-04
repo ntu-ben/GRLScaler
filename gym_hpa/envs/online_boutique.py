@@ -4,6 +4,8 @@ from datetime import datetime
 import logging
 import time
 from statistics import mean
+import requests
+from torch_geometric.data import Data
 
 import gym
 import numpy as np
@@ -12,7 +14,13 @@ from gym import spaces
 from gym.utils import seeding
 
 # Number of Requests - Discrete Event
-from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, get_online_boutique_deployment_list
+from gym_hpa.envs.deployment import (
+    get_max_cpu,
+    get_max_mem,
+    get_max_traffic,
+    get_online_boutique_deployment_list,
+    get_jaeger_service_graph,
+)
 from gym_hpa.envs.util import save_to_csv, get_num_pods, get_cost_reward, \
     get_latency_reward_online_boutique
 
@@ -74,7 +82,7 @@ class OnlineBoutique(gym.Env):
 
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3):
+    def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3, use_graph=False):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -85,6 +93,7 @@ class OnlineBoutique(gym.Env):
         self.__version__ = "0.0.1"
         self.seed()
         self.goal_reward = goal_reward
+        self.use_graph = use_graph
         self.waiting_period = waiting_period  # seconds to wait after action
 
         logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
@@ -125,7 +134,14 @@ class OnlineBoutique(gym.Env):
         for d in self.deploymentList:
             d.print_deployment()
 
-        self.observation_space = self.get_observation_space()
+        if self.use_graph:
+            num_services = len(DEPLOYMENTS)
+            node_feat_dim = 6
+            node_feat_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_services, node_feat_dim), dtype=np.float32)
+            adj_space = spaces.Box(low=0, high=1, shape=(num_services, num_services), dtype=np.float32)
+            self.observation_space = spaces.Dict({'node_features': node_feat_space, 'adjacency': adj_space})
+        else:
+            self.observation_space = self.get_observation_space()
 
         # Action and Observation Space
         # logging.info("[Init] Action Spaces: " + str(self.action_space))
@@ -156,6 +172,16 @@ class OnlineBoutique(gym.Env):
         dataset_path = os.path.join(base_dir, "gym-hpa","datasets", "real", self.deploymentList[0].namespace, "v1", "online_boutique_gym_observation.csv")
         print(f"[INFO] Loading dataset from: {dataset_path}")
         self.df = pd.read_csv(dataset_path)
+
+
+    def _fetch_service_graph(self):
+        _, edges = get_jaeger_service_graph(app_name="online-boutique")
+        num = len(DEPLOYMENTS)
+        adj = np.zeros((num, num), dtype=np.float32)
+        for src, dst in edges:
+            if src < num and dst < num:
+                adj[src, dst] = 1
+        return adj
 
 
 
@@ -224,7 +250,8 @@ class OnlineBoutique(gym.Env):
 
         ob = self.get_state()
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
+        if not self.use_graph:
+            self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
 
         self.info = dict(
             total_reward=self.total_reward,
@@ -243,6 +270,8 @@ class OnlineBoutique(gym.Env):
                         self.total_reward, self.execution_time)
 
         # return ob, reward, self.episode_over, self.info
+        if self.use_graph:
+            return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.info
 
     def seed(self, seed=None):
@@ -268,7 +297,10 @@ class OnlineBoutique(gym.Env):
         # Deployment Data
         self.deploymentList = get_online_boutique_deployment_list(self.k8s, self.min_pods, self.max_pods)
 
-        return np.array(self.get_state())
+        state = self.get_state()
+        if self.use_graph:
+            return state
+        return np.array(state)
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
@@ -367,65 +399,24 @@ class OnlineBoutique(gym.Env):
         return reward
 
     def get_state(self):
-        # Observations: metrics - 3 Metrics!!
-        # "number_pods"
-        # "cpu"
-        # "mem"
-        # "requests"
+        features = []
+        for d in self.deploymentList:
+            features.append([
+                d.num_pods,
+                d.desired_replicas,
+                d.cpu_usage,
+                d.mem_usage,
+                d.received_traffic,
+                d.transmit_traffic,
+            ])
 
-        # Return ob
-        ob = (
-                self.deploymentList[ID_recommendation].num_pods,
-                self.deploymentList[ID_recommendation].desired_replicas,
-                self.deploymentList[ID_recommendation].cpu_usage, self.deploymentList[ID_recommendation].mem_usage,
-                self.deploymentList[ID_recommendation].received_traffic,
-                self.deploymentList[ID_recommendation].transmit_traffic,
-                self.deploymentList[ID_product_catalog].num_pods,
-                self.deploymentList[ID_product_catalog].desired_replicas,
-                self.deploymentList[ID_product_catalog].cpu_usage, self.deploymentList[ID_product_catalog].mem_usage,
-                self.deploymentList[ID_product_catalog].received_traffic,
-                self.deploymentList[ID_product_catalog].transmit_traffic,
-                self.deploymentList[ID_cart_service].num_pods, self.deploymentList[ID_cart_service].desired_replicas,
-                self.deploymentList[ID_cart_service].cpu_usage, self.deploymentList[ID_cart_service].mem_usage,
-                self.deploymentList[ID_cart_service].received_traffic,
-                self.deploymentList[ID_cart_service].transmit_traffic,
-                self.deploymentList[ID_ad_service].num_pods, self.deploymentList[ID_ad_service].desired_replicas,
-                self.deploymentList[ID_ad_service].cpu_usage, self.deploymentList[ID_ad_service].mem_usage,
-                self.deploymentList[ID_ad_service].received_traffic,
-                self.deploymentList[ID_ad_service].transmit_traffic,
-                self.deploymentList[ID_payment_service].num_pods,
-                self.deploymentList[ID_payment_service].desired_replicas,
-                self.deploymentList[ID_payment_service].cpu_usage, self.deploymentList[ID_payment_service].mem_usage,
-                self.deploymentList[ID_payment_service].received_traffic,
-                self.deploymentList[ID_payment_service].transmit_traffic,
-                self.deploymentList[ID_shipping_service].num_pods,
-                self.deploymentList[ID_shipping_service].desired_replicas,
-                self.deploymentList[ID_shipping_service].cpu_usage, self.deploymentList[ID_shipping_service].mem_usage,
-                self.deploymentList[ID_shipping_service].received_traffic,
-                self.deploymentList[ID_shipping_service].transmit_traffic,
-                self.deploymentList[ID_currency_service].num_pods,
-                self.deploymentList[ID_currency_service].desired_replicas,
-                self.deploymentList[ID_currency_service].cpu_usage, self.deploymentList[ID_currency_service].mem_usage,
-                self.deploymentList[ID_currency_service].received_traffic,
-                self.deploymentList[ID_currency_service].transmit_traffic,
-                self.deploymentList[ID_redis_cart].num_pods, self.deploymentList[ID_redis_cart].desired_replicas,
-                self.deploymentList[ID_redis_cart].cpu_usage, self.deploymentList[ID_redis_cart].mem_usage,
-                self.deploymentList[ID_redis_cart].received_traffic,
-                self.deploymentList[ID_redis_cart].transmit_traffic,
-                self.deploymentList[ID_checkout_service].num_pods,
-                self.deploymentList[ID_checkout_service].desired_replicas,
-                self.deploymentList[ID_checkout_service].cpu_usage, self.deploymentList[ID_checkout_service].mem_usage,
-                self.deploymentList[ID_checkout_service].received_traffic,
-                self.deploymentList[ID_checkout_service].transmit_traffic,
-                self.deploymentList[ID_frontend].num_pods, self.deploymentList[ID_frontend].desired_replicas,
-                self.deploymentList[ID_frontend].cpu_usage, self.deploymentList[ID_frontend].mem_usage,
-                self.deploymentList[ID_frontend].received_traffic, self.deploymentList[ID_frontend].transmit_traffic,
-                self.deploymentList[ID_email].num_pods, self.deploymentList[ID_email].desired_replicas,
-                self.deploymentList[ID_email].cpu_usage, self.deploymentList[ID_email].mem_usage,
-                self.deploymentList[ID_email].received_traffic, self.deploymentList[ID_email].transmit_traffic,
-            )
-
-        return ob
+        if self.use_graph:
+            adj = self._fetch_service_graph()
+            return {
+                'node_features': np.array(features, dtype=np.float32),
+                'adjacency': adj,
+            }
+        return tuple(np.array(features).flatten())
 
     def get_observation_space(self):
             return spaces.Box(
