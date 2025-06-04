@@ -19,6 +19,35 @@ PROMETHEUS_URL = 'http://localhost:9090/'
 # Endpoint of your Kube cluster: kube proxy enabled
 HOST = "http://localhost:8001"
 
+# Jaeger query API base URL
+JAEGER_API_URL = "http://jaeger-query:16686/api"
+
+def get_jaeger_service_graph(app_name=None):
+    """Query Jaeger dependencies and return node list and edge index."""
+    url = f"{JAEGER_API_URL}/dependencies"
+    params = {"service": app_name} if app_name else {}
+    try:
+        resp = requests.get(url, params=params, timeout=5)
+        resp.raise_for_status()
+    except Exception as e:
+        logging.error("Jaeger request failed: %s", e)
+        return [], []
+    data = resp.json().get("data", [])
+    nodes = set()
+    edges = []
+    for dep in data:
+        parent = dep.get("parent")
+        child = dep.get("child")
+        if parent is None or child is None:
+            continue
+        nodes.add(parent)
+        nodes.add(child)
+        edges.append((parent, child))
+    node_list = list(nodes)
+    index = {n: i for i, n in enumerate(node_list)}
+    edge_index = [(index[p], index[c]) for p, c in edges]
+    return node_list, edge_index
+
 # TODO: Add the TOKEN from your cluster!
 TOKEN = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ik5HR0FMM2hWXzlLRHhPQkVESm9QRFJlaUxtYVB0UFYtUzZWcUp3aGp6YXMifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiLCJrM3MiXSwiZXhwIjoxNzgwNTAxMjYyLCJpYXQiOjE3NDg5NjUyNjIsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiMzMxZTM2NGMtODhjNi00ZTUzLWJmMzctNjA3ZjI4M2JmMjgwIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsInNlcnZpY2VhY2NvdW50Ijp7Im5hbWUiOiJhZG1pbi11c2VyIiwidWlkIjoiZjJmN2UxZTgtNGUyMC00Mzg4LWI1ZTAtYjIyODkzN2E0OGRkIn19LCJuYmYiOjE3NDg5NjUyNjIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWRhc2hib2FyZDphZG1pbi11c2VyIn0.joXgIUfdldCodJvNht47HU-mSI3vFOjv2f6tvj_9LXensP7i9y-oqQXuoQNlvEFC2Sx9Vs77XsrM4aj8IVntYAjseTM9jsBXGbfYeYwSOJxEJ_sEhQKnjj4M97_3bejDlrxUCF9Zf73iA9RraN6xTb8dG7ebzr5mqM8F1ls758gSQncVJqFEaugs70Gf_CLStc_eoQGjh7Az453jB6fLcorkJCBiI7VuxFUKinguo3eEiJGfwcUOA3nDGLAa8pKAKv_0nzCsIE6jJtx7eZUskgtH1hjFL_kc1hEc1AJ69YlgFG_QR3tdK3K81nDbV0xnKMrHdHkxWCF6J6tNccFdOQ"
 

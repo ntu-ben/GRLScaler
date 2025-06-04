@@ -21,6 +21,7 @@ parser.add_argument('--alg', default='ppo', help='The algorithm: ["ppo", "recurr
 parser.add_argument('--k8s', default=False, action="store_true", help='K8s mode')
 parser.add_argument('--use_case', default='redis', help='Apps: ["redis", "online_boutique"]')
 parser.add_argument('--goal', default='cost', help='Reward Goal: ["cost", "latency"]')
+parser.add_argument('--gnn_mode', action='store_true', help='Enable GNN based policy')
 
 parser.add_argument('--training', default=False, action="store_true", help='Training mode')
 parser.add_argument('--testing', default=False, action="store_true", help='Testing mode')
@@ -51,10 +52,14 @@ def resolve_device(arg: str) -> torch.device:
 
 DEVICE = resolve_device(args.device)
 
-def get_model(alg, env, tensorboard_log):
+def get_model(alg, env, tensorboard_log, use_gnn=False):
     model = 0
+    policy = "MlpPolicy"
+    if use_gnn:
+        from policies.gnn_policy import GNNActorCriticPolicy
+        policy = GNNActorCriticPolicy
     if alg == 'ppo':
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE)
+        model = PPO(policy, env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE)
     elif alg == 'recurrent_ppo':
         model = RecurrentPPO("MlpLstmPolicy", env, verbose=1, tensorboard_log=tensorboard_log, device=DEVICE)
     elif alg == 'a2c':
@@ -65,9 +70,13 @@ def get_model(alg, env, tensorboard_log):
     return model
 
 
-def get_load_model(alg, tensorboard_log, load_path):
+def get_load_model(alg, tensorboard_log, load_path, use_gnn=False):
     if alg == 'ppo':
-        return PPO.load(load_path, reset_num_timesteps=False, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE)
+        policy = "MlpPolicy"
+        if use_gnn:
+            from policies.gnn_policy import GNNActorCriticPolicy
+            policy = GNNActorCriticPolicy
+        return PPO.load(load_path, reset_num_timesteps=False, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE, custom_objects={"policy_class": policy})
     elif alg == 'recurrent_ppo':
         return RecurrentPPO.load(load_path, reset_num_timesteps=False, verbose=1,
                                  tensorboard_log=tensorboard_log, device=DEVICE)  # n_steps=steps
@@ -77,12 +86,12 @@ def get_load_model(alg, tensorboard_log, load_path):
         logging.info('Invalid algorithm!')
 
 
-def get_env(use_case, k8s, goal):
+def get_env(use_case, k8s, goal, use_graph=False):
     env = 0
     if use_case == 'redis':
-        env = Redis(k8s=k8s, goal_reward=goal)
+        env = Redis(k8s=k8s, goal_reward=goal, use_graph=use_graph)
     elif use_case == 'online_boutique':
-        env = OnlineBoutique(k8s=k8s, goal_reward=goal)
+        env = OnlineBoutique(k8s=k8s, goal_reward=goal, use_graph=use_graph)
     else:
         logging.error('Invalid use_case!')
         raise ValueError('Invalid use_case!')
@@ -98,6 +107,7 @@ def main():
     k8s = args.k8s
     use_case = args.use_case
     goal = args.goal
+    use_gnn = args.gnn_mode
 
     loading = args.loading
     load_path = args.load_path
@@ -108,7 +118,7 @@ def main():
     steps = int(args.steps)
     total_steps = int(args.total_steps)
 
-    env = get_env(use_case, k8s, goal)
+    env = get_env(use_case, k8s, goal, use_graph=use_gnn)
 
     scenario = ''
     if k8s:
@@ -125,17 +135,17 @@ def main():
 
     if training:
         if loading:  # resume training
-            model = get_load_model(alg, tensorboard_log, load_path)
+            model = get_load_model(alg, tensorboard_log, load_path, use_gnn)
             model.set_env(env)
             model.learn(total_timesteps=total_steps, tb_log_name=name + "_run", callback=checkpoint_callback)
         else:
-            model = get_model(alg, env, tensorboard_log)
+            model = get_model(alg, env, tensorboard_log, use_gnn)
             model.learn(total_timesteps=total_steps, tb_log_name=name + "_run", callback=checkpoint_callback)
 
         model.save(name)
 
     if testing:
-        model = get_load_model(alg, tensorboard_log, test_path)
+        model = get_load_model(alg, tensorboard_log, test_path, use_gnn)
         test_model(model, env, n_episodes=100, n_steps=110, smoothing_window=5, fig_name=name + "_test_reward.png")
 
 

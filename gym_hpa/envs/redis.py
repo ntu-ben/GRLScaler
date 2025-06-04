@@ -11,7 +11,15 @@ from gym import spaces
 from gym.utils import seeding
 from datetime import datetime
 
-from gym_hpa.envs.deployment import get_max_cpu, get_max_mem, get_max_traffic, get_redis_deployment_list
+from torch_geometric.data import Data
+import requests
+from gym_hpa.envs.deployment import (
+    get_max_cpu,
+    get_max_mem,
+    get_max_traffic,
+    get_redis_deployment_list,
+    get_jaeger_service_graph,
+)
 from gym_hpa.envs.util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
 
 # MIN and MAX Replication
@@ -60,7 +68,7 @@ class Redis(gym.Env):
     """Horizontal Scaling for Redis in Kubernetes - an OpenAI gym environment"""
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3):
+    def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3, use_graph=False):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -71,6 +79,7 @@ class Redis(gym.Env):
         self.__version__ = "0.0.1"
         self.seed()
         self.goal_reward = goal_reward
+        self.use_graph = use_graph
         self.waiting_period = waiting_period  # seconds to wait after action
 
         logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
@@ -107,7 +116,14 @@ class Redis(gym.Env):
         # Deployment Data
         self.deploymentList = get_redis_deployment_list(self.k8s, self.min_pods, self.max_pods)
 
-        self.observation_space = self.get_observation_space()
+        if self.use_graph:
+            num_nodes = len(DEPLOYMENTS)
+            node_feat_dim = 6
+            node_feat_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_nodes, node_feat_dim), dtype=np.float32)
+            adj_space = spaces.Box(low=0, high=1, shape=(num_nodes, num_nodes), dtype=np.float32)
+            self.observation_space = spaces.Dict({'node_features': node_feat_space, 'adjacency': adj_space})
+        else:
+            self.observation_space = self.get_observation_space()
 
         # Action and Observation Space
         # logging.info("[Init] Action Spaces: " + str(self.action_space))
@@ -134,6 +150,15 @@ class Redis(gym.Env):
         self.obs_csv = self.name + "_observation.csv"
         self.df = pd.read_csv("../../datasets/real/" + self.deploymentList[0].namespace + "/v1/"
                               + self.name + '_' + 'observation.csv')
+
+    def _fetch_service_graph(self):
+        _, edges = get_jaeger_service_graph(app_name="redis")
+        num = len(DEPLOYMENTS)
+        adj = np.zeros((num, num), dtype=np.float32)
+        for src, dst in edges:
+            if src < num and dst < num:
+                adj[src, dst] = 1
+        return adj
 
     def step(self, action):
         if self.current_step == 1:
@@ -182,7 +207,8 @@ class Redis(gym.Env):
 
         ob = self.get_state()
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
+        if not self.use_graph:
+            self.save_obs_to_csv(self.obs_csv, np.array(ob), date, self.deploymentList[0].latency)
 
         self.info = dict(
             total_reward=self.total_reward,
@@ -199,6 +225,8 @@ class Redis(gym.Env):
                         self.total_reward, self.execution_time)
 
         # return ob, reward, self.episode_over, self.info
+        if self.use_graph:
+            return ob, reward, self.episode_over, self.info
         return np.array(ob), reward, self.episode_over, self.info
 
     def seed(self, seed=None):
@@ -224,7 +252,10 @@ class Redis(gym.Env):
         # Deployment Data
         self.deploymentList = get_redis_deployment_list(self.k8s, self.min_pods, self.max_pods)
 
-        return np.array(self.get_state())
+        state = self.get_state()
+        if self.use_graph:
+            return state
+        return np.array(state)
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
@@ -339,17 +370,23 @@ class Redis(gym.Env):
         # "mem"
         # "requests"
 
-        # Return ob
-        ob = (
-            self.deploymentList[0].num_pods, self.deploymentList[0].desired_replicas,
-            self.deploymentList[0].cpu_usage, self.deploymentList[0].mem_usage,
-            self.deploymentList[0].received_traffic, self.deploymentList[0].transmit_traffic,
-            self.deploymentList[1].num_pods, self.deploymentList[1].desired_replicas,
-            self.deploymentList[1].cpu_usage, self.deploymentList[1].mem_usage,
-            self.deploymentList[1].received_traffic, self.deploymentList[1].transmit_traffic,
-        )
-
-        return ob
+        features = []
+        for d in self.deploymentList:
+            features.append([
+                d.num_pods,
+                d.desired_replicas,
+                d.cpu_usage,
+                d.mem_usage,
+                d.received_traffic,
+                d.transmit_traffic,
+            ])
+        if self.use_graph:
+            adj = self._fetch_service_graph()
+            return {
+                'node_features': np.array(features, dtype=np.float32),
+                'adjacency': adj,
+            }
+        return tuple(np.array(features).flatten())
 
     def get_observation_space(self):
         return spaces.Box(
