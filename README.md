@@ -33,28 +33,5 @@ python run.py
 
 Additional arguments can be passed while running run.py. Please check here [run.py](policies/run/run.py). 
 
-## Team
-
-* [Jose Santos](https://scholar.google.com/citations?hl=en&user=57EIYWcAAAAJ)
-
-* [Tim Wauters](https://scholar.google.com/citations?hl=en&user=Kvxp9iYAAAAJ)
-
-* [Bruno Volckaert](https://scholar.google.com/citations?hl=en&user=NIILGOMAAAAJ)
-
-* [Filip de Turck](https://scholar.google.com/citations?hl=en&user=-HXXnmEAAAAJ)
-
-## Contact
-
-If you want to contribute, please contact:
-
-Lead developer: [Jose Santos](https://github.com/jpedro1992/)
-
-For questions or support, please use GitHub's issue system.
-
-## License
-
-Copyright (c) 2020 Ghent University and IMEC vzw.
-
-Address: IDLab, Ghent University, iGent Toren, Technologiepark-Zwijnaarde 126 B-9052 Gent, Belgium
 
 
