@@ -168,8 +168,15 @@ class OnlineBoutique(gym.Env):
         self.obs_csv = self.name + "_observation.csv"
         import os
 
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-        dataset_path = os.path.join(base_dir, "gym-hpa","datasets", "real", self.deploymentList[0].namespace, "v1", "online_boutique_gym_observation.csv")
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        dataset_path = os.path.join(
+            base_dir,
+            "datasets",
+            "real",
+            self.deploymentList[0].namespace,
+            "v1",
+            "online_boutique_gym_observation.csv",
+        )
         print(f"[INFO] Loading dataset from: {dataset_path}")
         self.df = pd.read_csv(dataset_path)
 
