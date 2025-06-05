@@ -19,9 +19,9 @@ Two environments exist based on the [Redis Cluster](https://github.com/bitnami/c
 
 Both RL environments have been designed: actions, observations, reward function. 
 
-Please check the [run.py](policies/run/run.py) file to understand how to run the framework. 
+Please check the [run.py](policies/run/run.py) file to understand how to run the framework.
 
-To run in the real cluster mode, you should add the token to your cluster [here](gym_hpa/envs/deployment.py)
+To run in the real cluster mode, set your Kubernetes API token in the environment variable `K8S_TOKEN` (or in a `.env` file) so that `gym_hpa/envs/deployment.py` can read it at runtime.
 
 ### Running
 
