@@ -152,12 +152,17 @@ class Redis(gym.Env):
                               + self.name + '_' + 'observation.csv')
 
     def _fetch_service_graph(self):
-        _, edges = get_jaeger_service_graph(app_name="redis")
+        nodes, edges = get_jaeger_service_graph(app_name="redis")
+        index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)
         for src, dst in edges:
-            if src < num and dst < num:
-                adj[src, dst] = 1
+            if src >= len(nodes) or dst >= len(nodes):
+                continue
+            src_name = nodes[src]
+            dst_name = nodes[dst]
+            if src_name in index and dst_name in index:
+                adj[index[src_name], index[dst_name]] = 1
         return adj
 
     def step(self, action):
