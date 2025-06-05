@@ -21,7 +21,7 @@ PROMETHEUS_URL = 'http://localhost:9090/'
 HOST = "http://localhost:8001"
 
 # Jaeger query API base URL
-JAEGER_API_URL = "http://jaeger-query:16686/api"
+JAEGER_API_URL = "http://localhost:16686/api"
 
 def get_jaeger_service_graph(app_name=None):
     """Query Jaeger dependencies and return node list and edge index."""
