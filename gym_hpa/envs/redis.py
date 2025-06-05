@@ -11,8 +11,6 @@ from gym import spaces
 from gym.utils import seeding
 from datetime import datetime
 
-from torch_geometric.data import Data
-import requests
 from gym_hpa.envs.deployment import (
     get_max_cpu,
     get_max_mem,

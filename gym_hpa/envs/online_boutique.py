@@ -4,8 +4,6 @@ from datetime import datetime
 import logging
 import time
 from statistics import mean
-import requests
-from torch_geometric.data import Data
 
 import gym
 import numpy as np
