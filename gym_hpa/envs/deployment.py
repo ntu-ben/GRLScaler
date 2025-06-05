@@ -3,8 +3,20 @@ import math
 import random
 import time
 import os
+from pathlib import Path
 import requests
 from kubernetes import client
+
+# Load environment variables from a .env file if present
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+if ENV_PATH.exists():
+    with open(ENV_PATH) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k, v)
 
 # Constants
 MAX_CPU = 10000  # cpu in m
@@ -49,7 +61,7 @@ def get_jaeger_service_graph(app_name=None):
     edge_index = [(index[p], index[c]) for p, c in edges]
     return node_list, edge_index
 
-# Token for the Kubernetes cluster is retrieved from the environment
+# Token for the Kubernetes cluster loaded from environment or .env file
 TOKEN = os.getenv("K8S_TOKEN")
 
 
@@ -246,8 +258,12 @@ class DeploymentStatus:  # Deployment Status (Workload)
             # In cluster config!
             # config.load_incluster_config()
 
-            # token for VWall cluster
+            # token for the Kubernetes cluster
             self.token = TOKEN
+            if not self.token:
+                raise ValueError(
+                    "K8S_TOKEN not found in environment or .env file."
+                )
 
             # Create a configuration object
             self.config = client.Configuration()

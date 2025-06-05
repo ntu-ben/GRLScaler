@@ -21,7 +21,8 @@ Both RL environments have been designed: actions, observations, reward function.
 
 Please check the [run.py](policies/run/run.py) file to understand how to run the framework.
 
-To run in the real cluster mode, set your Kubernetes API token in the environment variable `K8S_TOKEN` (or in a `.env` file) so that `gym_hpa/envs/deployment.py` can read it at runtime.
+To run in the real cluster mode, set your Kubernetes API token in the environment variable `K8S_TOKEN`.
+You can also copy `.envTemplate` to `.env` and fill in your token so that `gym_hpa/envs/deployment.py` can read it automatically.
 
 ### Running
 
