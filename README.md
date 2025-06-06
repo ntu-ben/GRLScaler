@@ -32,7 +32,31 @@ To run the code, go to the folder `policies/run` and run:
 python run.py
 ```
 
-Additional arguments can be passed while running run.py. Please check here [run.py](policies/run/run.py). 
+Additional arguments can be passed while running run.py. Please check here [run.py](policies/run/run.py).
+
+### Service graph via Linkerd
+
+The environments obtain service topology from the Linkerd `viz` extension rather
+than Jaeger. Make sure `linkerd-viz` is installed and accessible. By default the
+library queries `http://metrics-api.linkerd-viz.svc.cluster.local:8085/api/edges`
+(configurable via the `LINKERD_VIZ_API_URL` environment variable) to build the adjacency matrix used by
+the GNN observation space.
+
+### Deploying Online Boutique with Linkerd
+
+When deploying the Online Boutique demo into your cluster, make sure each
+deployment is injected with the Linkerd proxy. If you already applied the
+manifest, re-apply it with:
+
+```bash
+kubectl -n onlineboutique get deploy -o yaml \
+  | linkerd inject - \
+  | kubectl apply -f -
+```
+
+This step ensures that service edges and metrics are visible through
+`linkerd-viz`, allowing the environments in this repository to extract the
+service graph correctly.
 
 
 

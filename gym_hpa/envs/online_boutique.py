@@ -17,7 +17,7 @@ from gym_hpa.envs.deployment import (
     get_max_mem,
     get_max_traffic,
     get_online_boutique_deployment_list,
-    get_jaeger_service_graph,
+    get_linkerd_service_graph,
 )
 from gym_hpa.envs.util import save_to_csv, get_num_pods, get_cost_reward, \
     get_latency_reward_online_boutique
@@ -180,7 +180,7 @@ class OnlineBoutique(gym.Env):
 
 
     def _fetch_service_graph(self):
-        nodes, edges = get_jaeger_service_graph(app_name="online-boutique")
+        nodes, edges = get_linkerd_service_graph(namespace="onlineboutique")
         index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)
