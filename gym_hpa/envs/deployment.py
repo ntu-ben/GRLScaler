@@ -32,25 +32,33 @@ PROMETHEUS_URL = 'http://localhost:9090/'
 # Endpoint of your Kube cluster: kube proxy enabled
 HOST = "http://localhost:8001"
 
-# Jaeger query API base URL
-JAEGER_API_URL = "http://localhost:16686/jaeger/api"
+# Linkerd viz edges API base URL
+# metrics-api service usually runs at http://metrics-api.linkerd-viz.svc.cluster.local:8085
+# but can be overridden via the LINKERD_VIZ_API_URL env var
+LINKERD_VIZ_API_URL = os.getenv(
+    "LINKERD_VIZ_API_URL",
+    "http://metrics-api.linkerd-viz.svc.cluster.local:8085",
+)
 
-def get_jaeger_service_graph(app_name=None):
-    """Query Jaeger dependencies and return node list and edge index."""
-    url = f"{JAEGER_API_URL}/dependencies"
-    params = {"service": app_name} if app_name else {}
+
+def get_linkerd_service_graph(namespace=None):
+    """Query Linkerd edges and return node list and edge index."""
+    if namespace:
+        url = f"{LINKERD_VIZ_API_URL}/api/namespaces/{namespace}/edges"
+    else:
+        url = f"{LINKERD_VIZ_API_URL}/api/edges"
     try:
-        resp = requests.get(url, params=params, timeout=5)
+        resp = requests.get(url, timeout=5)
         resp.raise_for_status()
     except Exception as e:
-        logging.error("Jaeger request failed: %s", e)
+        logging.error("Linkerd request failed: %s", e)
         return [], []
-    data = resp.json().get("data", [])
+    data = resp.json().get("edges", [])
     nodes = set()
     edges = []
     for dep in data:
-        parent = dep.get("parent")
-        child = dep.get("child")
+        parent = dep.get("src", {}).get("name")
+        child = dep.get("dst", {}).get("name")
         if parent is None or child is None:
             continue
         nodes.add(parent)

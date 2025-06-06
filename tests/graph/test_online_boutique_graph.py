@@ -11,7 +11,7 @@ from gym_hpa.envs import deployment, online_boutique
 def test_fetch_service_graph(monkeypatch):
     nodes = ["recommendationservice", "productcatalogservice"]
     edges = [(0, 1)]
-    monkeypatch.setattr(online_boutique, "get_jaeger_service_graph", lambda app_name=None: (nodes, edges))
+    monkeypatch.setattr(online_boutique, "get_linkerd_service_graph", lambda namespace=None: (nodes, edges))
 
     env = OnlineBoutique(k8s=False, use_graph=True)
     adj = env._fetch_service_graph()
@@ -23,7 +23,7 @@ def test_fetch_service_graph(monkeypatch):
 def test_reset_returns_graph(monkeypatch):
     nodes = ["recommendationservice", "productcatalogservice"]
     edges = [(0, 1)]
-    monkeypatch.setattr(online_boutique, "get_jaeger_service_graph", lambda app_name=None: (nodes, edges))
+    monkeypatch.setattr(online_boutique, "get_linkerd_service_graph", lambda namespace=None: (nodes, edges))
 
     env = OnlineBoutique(k8s=False, use_graph=True)
     obs = env.reset()
