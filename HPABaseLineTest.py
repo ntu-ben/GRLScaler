@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""
+Batch load‑test runner for Online Boutique (one‑shot, no retry on Locust failures)
+==========================================================================
+* 逐一套用 `HPA/onlineboutique/*` 子資料夾的 HPA
+* 每組 HPA 預熱 & 健康檢查後，依序跑 4 種 Locust 情境：
+      off‑peak → rush‑sale → peak → fluctuating
+  ‑ 每段前先 **sleep 5 分鐘**，再確認 frontend 回 200。
+  ‑ **不再因為失敗率重跑**；Locust 無論 exit‑code，都只跑一次並記錄結果。
+* 失敗或產生不到 CSV 時，會寫 warning，但流程持續到下一 scenario/HPA。
+* 結束後產生 `logs/<hpa>/summary.csv` 與 `logs/aggregate.html`。
+"""
+import subprocess, datetime as dt, time, logging, sys
+from pathlib import Path
+
+import pandas as pd
+import requests
+from jinja2 import Template
+
+# ── configuration ─────────────────────────────────────────────────────────
+NAMESPACE     = "onlineboutique"
+MICRO_DEMO    = Path("/Users/hopohan/Desktop/k8s/microservices-demo")
+MANIFEST_YAML = MICRO_DEMO / "release/kubernetes-manifests.yaml"
+HPA_ROOT      = Path("/Users/hopohan/Desktop/k8s/intelliScaler/macK8S/HPA/onlineboutique")
+LOCUST_ROOT   = Path(__file__).resolve().parent / "stressTest" / "onlineboutique"
+TARGET_HOST   = "http://frontend.onlineboutique.svc.cluster.local"
+HEALTH_PATH   = "/"
+HTTP_TIMEOUT  = 600   # wait up to 10 min for 200 OK
+COOLDOWN_SEC  = 150   # 2.5 min between scenarios
+
+LOCUST_SCRIPTS = {
+    "offpeak":      "locust_offpeak.py",
+    "rushsale":     "locust_rushsale.py",
+    "peak":         "locust_peak.py",
+    "fluctuating":  "locust_fluctuating.py",
+}
+RUN_TIME = "15m"
+LOG_ROOT = Path("logs")
+
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s",
+                    handlers=[logging.FileHandler("batch_run.log"),
+                              logging.StreamHandler(sys.stdout)])
+
+# ── helpers ──────────────────────────────────────────────────────────────
+
+def sh(cmd, **kw):
+    if not isinstance(cmd, str):
+        printable = " ".join(map(str, cmd)); cmd = list(map(str, cmd))
+    else:
+        printable = cmd
+    logging.info("$ %s", printable)
+    subprocess.run(cmd, check=True, **kw)
+
+
+def reset_demo():
+    sh(["kubectl", "delete", "-f", MANIFEST_YAML, "-n", NAMESPACE], cwd=MICRO_DEMO)
+    sh(["kubectl", "apply",  "-f", MANIFEST_YAML, "-n", NAMESPACE], cwd=MICRO_DEMO)
+
+
+def apply_hpa(folder: Path):
+    logging.info("Apply HPA %s", folder.name)
+    for y in sorted(folder.glob("*.yaml")):
+        sh(["kubectl", "apply", "-f", y, "-n", NAMESPACE])
+
+
+def delete_hpa(folder: Path):
+    logging.info("Delete HPA %s", folder.name)
+    for y in sorted(folder.glob("*.yaml")):
+        sh(["kubectl", "delete", "-f", y, "-n", NAMESPACE])
+
+
+def wait_frontend_ready():
+    sh(["kubectl", "rollout", "status", "deployment/frontend", "-n", NAMESPACE])
+    url = TARGET_HOST.rstrip("/") + HEALTH_PATH
+    deadline = time.time() + HTTP_TIMEOUT
+    while time.time() < deadline:
+        try:
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                logging.info("Health‑check 200 OK")
+                return
+            logging.warning("Status %s, retry…", r.status_code)
+        except requests.RequestException as e:
+            logging.warning("%s, retry…", e)
+        time.sleep(5)
+    raise RuntimeError("frontend did not reach HTTP 200 in time")
+
+
+def run_locust_once(scenario: str, script: Path, out_dir: Path):
+    """Run Locust exactly once, regardless of failure rate. Exit‑code≠0 只記錄警告。"""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_prefix = out_dir / scenario
+    html_file  = out_dir / f"{scenario}.html"
+    cmd = ["locust", "-f", script, "--headless", "--run-time", RUN_TIME,
+           "--host", TARGET_HOST,
+           "--csv", csv_prefix, "--csv-full-history",
+           "--html", html_file]
+    try:
+        sh(cmd)
+    except subprocess.CalledProcessError as err:
+        logging.warning("Locust %s finished with exit-code %s (failures present)", scenario, err.returncode)
+
+
+def summarise(hpa: str, scenario_dirs: list[Path]):
+    rows = []
+    for d in scenario_dirs:
+        try:
+            stat_csv = next(d.glob("*_stats.csv"))
+        except StopIteration:
+            logging.warning("No stats CSV for %s", d)
+            continue
+        df = pd.read_csv(stat_csv)
+        total = df[df["Name"] == "Total"]
+        if total.empty:
+            logging.warning("No 'Total' row in %s", stat_csv)
+            continue
+        tot = total.iloc[0]
+        rows.append({
+            "HPA": hpa,
+            "Scenario": d.name,
+            "Requests": tot.get("Request Count", 0),
+            "Failures": tot.get("Failure Count", 0),
+            "Avg RPS": tot.get("Requests/s", 0),
+            "P95 ms": tot.get("95%", 0),
+        })
+    return pd.DataFrame(rows, columns=["HPA", "Scenario", "Requests", "Failures", "Avg RPS", "P95 ms"])
+
+# ── main ────────────────────────────────────────────────────────────────
+
+def main():
+    LOG_ROOT.mkdir(exist_ok=True)
+    master_rows = []
+
+    for folder in sorted(p for p in HPA_ROOT.iterdir() if p.is_dir()):
+        hpa_name = folder.name
+        logging.info("=== HPA %s ===", hpa_name)
+        start = dt.datetime.now()
+
+        reset_demo()
+        apply_hpa(folder)
+        wait_frontend_ready()
+
+        scenario_dirs = []
+        for scn, file in LOCUST_SCRIPTS.items():
+            logging.info("Cooldown %s for %d sec", scn, COOLDOWN_SEC)
+            time.sleep(COOLDOWN_SEC)
+            wait_frontend_ready()
+            s_dir = LOG_ROOT / hpa_name / scn
+            run_locust_once(scn, LOCUST_ROOT / file, s_dir)
+            scenario_dirs.append(s_dir)
+
+        delete_hpa(folder)
+        end = dt.datetime.now()
+
+        summarise(hpa_name, scenario_dirs).to_csv(LOG_ROOT / hpa_name / "summary.csv", index=False)
+        master_rows.append({"HPA": hpa_name, "Start": start, "End": end, "LogDir": (LOG_ROOT/hpa_name).resolve().as_posix()})
+
+    df_master = pd.DataFrame(master_rows)
+    df_master.to_csv(LOG_ROOT/"master_summary.csv", index=False)
+    render_dashboard(df_master)
+    logging.info("✅ All tests done → logs/aggregate.html")
+
+# ── dashboard ──────────────────────────────────────────────────────────
+
+def render_dashboard(df: pd.DataFrame, out_dir: Path):
+    html = Template("""<html><head><title>{{ tag }}</title></head><body>
+    {{ tbl | safe }}
+    <ul>{% for _, r in df.iterrows() %}
+      <li><a href='{{ r.IterDir }}/summary.csv'>{{ r.Iter }}</a></li>
+    {% endfor %}</ul>
+    </body></html>""").render(
+        tag=out_dir.name,
+        tbl=df.to_html(index=False),
+        df=df                       # ← 關鍵：把 df 傳給樣板
+    )
+    (out_dir / "aggregate.html").write_text(html, encoding="utf-8")
+
+if __name__ == "__main__":
+    main()
+

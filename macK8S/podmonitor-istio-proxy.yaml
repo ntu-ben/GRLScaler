@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istio-proxy
+  namespace: prometheus          # 建議放在跟 Prometheus 同一個 ns
+  labels:
+    release: prometheus-stack    # 必須和 kube-prometheus-stack 的 release label 相同
+spec:
+  selector:
+    matchLabels:
+      security.istio.io/tlsMode: istio   # 任何被 sidecar 注入的 Pod 都有這個標籤
+  namespaceSelector:
+    any: true                            # 抓整個叢集的 sidecar
+  podMetricsEndpoints:
+    - port: http-envoy-prom              # ← 改成 **名稱**
+      path: /stats/prometheus            # Istio / Envoy metrics
+      interval: 15s
+

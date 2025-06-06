@@ -1,0 +1,47 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istio-ingressgateway
+  namespace: prometheus      # ← 跟 Prometheus 安裝同一 ns
+  labels:
+    release: prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: istio-ingressgateway   # service 的 label
+  namespaceSelector:
+    matchNames: [istio-system]
+  endpoints:
+    # 1️⃣ 先用 gateway Service 已經有的 15021 來做 service discover
+    - port: status-port           # <- svc 原本就有
+      path: /stats/prometheus     # Envoy metrics 路徑
+      interval: 15s
+      scheme: http
+      # 2️⃣ 把 __address__ 換成 PodIP:15090
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_ip]
+          action: replace
+          targetLabel: __address__
+          regex: (.*)
+          replacement: $1:15090
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: istiod
+  namespace: prometheus
+  labels:
+    release: prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: istiod
+  namespaceSelector:
+    matchNames:
+      - istio-system
+  endpoints:
+    - port: http-monitoring
+      path: /metrics
+      interval: 15s
+
