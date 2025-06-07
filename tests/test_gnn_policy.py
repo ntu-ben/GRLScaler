@@ -3,7 +3,7 @@ import pytest
 np = pytest.importorskip("numpy")
 gym = pytest.importorskip("gymnasium")
 sb3 = pytest.importorskip("stable_baselines3")
-from policies.gnn_policy import GNNActorCriticPolicy
+from gnn_rl.gnn_policy import GNNActorCriticPolicy
 PPO = sb3.PPO
 
 class DummyGraphEnv(gym.Env):
