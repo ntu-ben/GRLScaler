@@ -9,7 +9,7 @@ from gym_hpa.envs import Redis, OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
 # Logging
-from policies.util.util import test_model
+from gnn_rl.util.util import test_model
 
 logging.basicConfig(filename='run.log', filemode='w', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -54,7 +54,7 @@ def get_model(alg, env, tensorboard_log, use_gnn=False):
     model = 0
     policy = "MlpPolicy"
     if use_gnn:
-        from policies.gnn_policy import GNNActorCriticPolicy
+        from gnn_rl.gnn_policy import GNNActorCriticPolicy
         policy = GNNActorCriticPolicy
     if alg == 'ppo':
         model = PPO(policy, env, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE)
@@ -72,7 +72,7 @@ def get_load_model(alg, tensorboard_log, load_path, use_gnn=False):
     if alg == 'ppo':
         policy = "MlpPolicy"
         if use_gnn:
-            from policies.gnn_policy import GNNActorCriticPolicy
+            from gnn_rl.gnn_policy import GNNActorCriticPolicy
             policy = GNNActorCriticPolicy
         return PPO.load(load_path, reset_num_timesteps=False, verbose=1, tensorboard_log=tensorboard_log, n_steps=500, device=DEVICE, custom_objects={"policy_class": policy})
     elif alg == 'recurrent_ppo':

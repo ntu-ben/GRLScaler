@@ -19,20 +19,20 @@ Two environments exist based on the [Redis Cluster](https://github.com/bitnami/c
 
 Both RL environments have been designed: actions, observations, reward function. 
 
-Please check the [run.py](policies/run/run.py) file to understand how to run the framework.
+Please check the [run.py](gnn_rl/run/run.py) file to understand how to run the framework.
 
 To run in the real cluster mode, set your Kubernetes API token in the environment variable `K8S_TOKEN`.
 You can also copy `.envTemplate` to `.env` and fill in your token so that `gym_hpa/envs/deployment.py` can read it automatically.
 
 ### Running
 
-To run the code, go to the folder `policies/run` and run:
+To run the code, go to the folder `gnn_rl/run` and run:
 
 ```bash
 python run.py
 ```
 
-Additional arguments can be passed while running run.py. Please check here [run.py](policies/run/run.py).
+Additional arguments can be passed while running run.py. Please check here [run.py](gnn_rl/run/run.py).
 
 ### Service graph via Linkerd
 
@@ -57,6 +57,23 @@ kubectl -n onlineboutique get deploy -o yaml \
 This step ensures that service edges and metrics are visible through
 `linkerd-viz`, allowing the environments in this repository to extract the
 service graph correctly.
+
+## Repository layout
+
+```
+gnn_rl/        # RL policies and training script
+gym_hpa/       # Custom Gym environments
+loadtest/      # Locust scenarios and remote agent for load testing
+k8s_hpa/       # HPA baseline scripts and Kubernetes manifests
+```
+
+The orchestration script `rl_batch_loadtest.py` launches RL training and
+triggers Locust scenarios. Set the `M1_HOST` environment variable to the URL of
+the remote agent if running distributed tests, otherwise Locust runs locally.
+
+Both `rl_batch_loadtest.py` and `loadtest/locust_agent.py` emit detailed
+debug logs. Check `logs/<run-tag>/batch.log` on the runner side and the console
+output of the agent to diagnose connectivity issues.
 
 
 

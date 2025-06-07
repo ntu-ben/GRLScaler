@@ -80,6 +80,82 @@ def wait_frontend_ready() -> None:
     raise RuntimeError("frontend never became ready")
 
 
+def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
+    """Start a Locust scenario either locally or via the remote agent."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if remote:
+        host = os.environ["M1_HOST"].rstrip("/")
+        logging.info("Trigger remote locust %s on %s", scenario, host)
+        payload = {
+            "tag": tag,
+            "scenario": scenario,
+            "target_host": TARGET_HOST,
+            "run_time": RUN_TIME,
+        }
+        logging.debug("POST %s/start %s", host, payload)
+        try:
+            r = requests.post(f"{host}/start", json=payload, timeout=10)
+            r.raise_for_status()
+            job_id = r.json()["job_id"]
+            logging.debug("job id %s", job_id)
+            while True:
+                time.sleep(5)
+                st = requests.get(f"{host}/status/{job_id}", timeout=10)
+                st.raise_for_status()
+                data = st.json()
+                logging.debug("status %s -> %s", job_id, data)
+                if data.get("finished"):
+                    break
+            for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
+                resp = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
+                if resp.status_code == 200:
+                    logging.debug("downloaded %s", fname)
+                    (out_dir / fname).write_bytes(resp.content)
+        except requests.RequestException as exc:
+            logging.error("remote locust failed: %s", exc)
+            raise
+    else:
+        script = Path(__file__).parent / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+        logging.info("Run local locust %s", scenario)
+        cmd = [
+            "locust", "-f", script, "--headless", "--run-time", RUN_TIME,
+            "--host", TARGET_HOST,
+            "--csv", out_dir / scenario, "--csv-full-history",
+            "--html", out_dir / f"{scenario}.html",
+        ]
+        sh(cmd)
+
+
+def summarise(run_tag: str, scenario_dirs: list[Path]) -> pd.DataFrame:
+    rows = []
+    for d in scenario_dirs:
+        try:
+            stat_csv = next(d.glob("*_stats.csv"))
+        except StopIteration:
+            logging.warning("No stats CSV for %s", d)
+            continue
+        df = pd.read_csv(stat_csv)
+        total = df[df["Name"] == "Total"]
+        if total.empty:
+            logging.warning("No 'Total' row in %s", stat_csv)
+            continue
+        tot = total.iloc[0]
+        rows.append({
+            "Run": run_tag,
+            "Scenario": d.name,
+            "Requests": tot.get("Request Count", 0),
+            "Failures": tot.get("Failure Count", 0),
+            "Avg RPS": tot.get("Requests/s", 0),
+            "P95 ms": tot.get("95%", 0),
+        })
+    return pd.DataFrame(rows)
+
+
+def render_dashboard(df: pd.DataFrame, out_dir: Path) -> None:
+    html = "<html><body>" + df.to_html(index=False) + "</body></html>"
+    (out_dir / "aggregate.html").write_text(html, encoding="utf-8")
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # 3. 主程式
 # --------------------------------------------------------------------------
@@ -108,8 +184,9 @@ def main() -> None:
 
         # 3-2 決定 RL repo 路徑
         rl_cwd = Path(args.rl_path) if args.rl_path else MODEL_ROOT[args.model]
-        if not (rl_cwd / "policies/run/run.py").exists():
-            panic(f"{rl_cwd}/policies/run/run.py 不存在")
+        # paths changed after repo refactor: policies -> gnn_rl
+        if not (rl_cwd / "gnn_rl/run/run.py").exists():
+            panic(f"{rl_cwd}/gnn_rl/run/run.py 不存在")
 
         # 3-3 run-tag & log 目錄
         default_tag = f"{args.alg}_{args.model}_{args.total_steps}"
@@ -130,7 +207,7 @@ def main() -> None:
 
         # 3-4 組合 RL 子行程命令
         rl_cmd = [
-            "python", "-m", "policies.run.run",
+            "python", "-m", "gnn_rl.run.run",
             "--alg", args.alg,
             "--use_case", args.use_case,
             "--goal", args.goal,
@@ -161,7 +238,16 @@ def main() -> None:
         logging.debug("🛠  Locust mode = %s",
                       "remote via "+os.getenv("M1_HOST") if from_locust_remote else "local")
 
-        # ----- 省略：這裡插入 run_locust / summarise / render_dashboard 等你原本的邏輯 -----
+        scenario_dirs = []
+        for scn in SCENARIOS:
+            out_dir = run_root / scn
+            run_locust(scn, run_tag, from_locust_remote, out_dir)
+            scenario_dirs.append(out_dir)
+
+        rl.wait()
+        df = summarise(run_tag, scenario_dirs)
+        df.to_csv(run_root / "summary.csv", index=False)
+        render_dashboard(df, run_root)
 
         logging.info("✅ 完成 → %s", run_root)
 
