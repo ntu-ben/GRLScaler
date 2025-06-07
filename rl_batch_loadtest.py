@@ -37,7 +37,7 @@ MODEL_ROOT: Dict[str, Path] = {
 }
 
 NAMESPACE     = "onlineboutique"
-TARGET_HOST   = "http://frontend.onlineboutique.svc.cluster.local"
+TARGET_HOST   = "http://k8s.orb.local"
 HEALTH_PATH   = "/"
 HTTP_TIMEOUT  = 600
 RUN_TIME      = "15m"

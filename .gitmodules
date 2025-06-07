@@ -1,0 +1,3 @@
+[submodule "MicroServiceBenchmark/microservices-demo"]
+	path = MicroServiceBenchmark/microservices-demo
+	url = https://github.com/GoogleCloudPlatform/microservices-demo
