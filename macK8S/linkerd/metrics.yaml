@@ -32,3 +32,21 @@ spec:
   - port: admin-http
     interval: 10s
 
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: linkerd-proxy
+  namespace: prometheus
+  labels: { release: prometheus-stack }
+spec:
+  namespaceSelector: { any: true }       # ★ 所有 namespace
+  selector:
+    matchLabels: { linkerd.io/control-plane-component: proxy }
+  endpoints:
+  - port: admin-http
+    interval: 10s
+    relabelings:
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+

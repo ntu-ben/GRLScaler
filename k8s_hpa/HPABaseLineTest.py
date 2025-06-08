@@ -19,9 +19,13 @@ from jinja2 import Template
 
 # ── configuration ─────────────────────────────────────────────────────────
 NAMESPACE     = "onlineboutique"
-MICRO_DEMO    = Path("/Users/hopohan/Desktop/k8s/microservices-demo")
-MANIFEST_YAML = MICRO_DEMO / "release/kubernetes-manifests.yaml"
-HPA_ROOT      = Path("/Users/hopohan/Desktop/k8s/intelliScaler/macK8S/HPA/onlineboutique")
+# 根目錄 (此檔案位於 repo/k8s_hpa/)
+REPO_ROOT     = Path(__file__).resolve().parents[1]
+# Online Boutique 原始碼路徑，可依需要調整
+MICRO_DEMO    = REPO_ROOT / "MicroServiceBenchmark" / "microservices-demo"
+MANIFEST_YAML = MICRO_DEMO / "release" / "kubernetes-manifests.yaml"
+# HPA YAML 目錄移至 repo/macK8S/HPA/onlineboutique
+HPA_ROOT      = REPO_ROOT / "macK8S" / "HPA" / "onlineboutique"
 LOCUST_ROOT   = Path(__file__).resolve().parent / "stressTest" / "onlineboutique"
 TARGET_HOST   = "http://frontend.onlineboutique.svc.cluster.local"
 HEALTH_PATH   = "/"
