@@ -10,7 +10,7 @@ CONTROL_NS="linkerd"
 VIZ_NS="linkerd-viz"
 
 # External Prometheus URL
-PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus-stack-kube-prom-prometheus.prometheus:9090}
+PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus-stack-kube-prom-prometheus.prometheus:9090/}
 
 # Values for linkerd-viz installation
 cat <<VALUES > /tmp/linkerd-viz-values.yaml
