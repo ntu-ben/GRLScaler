@@ -61,10 +61,12 @@ prometheus:
     additionalScrapeConfigs:
       name: prometheus-additional-scrape-config
       key: extra-scrape-configs.yaml
+    maximumStartupDurationSeconds: 600
 
 ---
 prometheus:
   prometheusSpec:
+    maximumStartupDurationSeconds: 600
     additionalScrapeConfigs: |
       - job_name: 'linkerd-controller'
         kubernetes_sd_configs:
