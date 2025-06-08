@@ -9,10 +9,14 @@ helm repo update
 CONTROL_NS="linkerd"
 VIZ_NS="linkerd-viz"
 
+# External Prometheus URL
+PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus-stack-kube-prom-prometheus.prometheus:9090}
+
 # Values for linkerd-viz installation
-cat <<'VALUES' > /tmp/linkerd-viz-values.yaml
+cat <<VALUES > /tmp/linkerd-viz-values.yaml
 prometheus:
   enabled: false
+prometheusUrl: "$PROMETHEUS_URL"
 
 # Expose dashboard via NodePort
 web:
