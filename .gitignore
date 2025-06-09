@@ -1,7 +1,7 @@
-.idea
-.DS_Store
-.csv
-.zip
+*.idea
+*.DS_Store
+*.csv
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
