@@ -30,10 +30,13 @@ except ModuleNotFoundError:
 # ──────────────────────────────────────────────────────────────────────────
 # 1. 全域常數（與舊版相同；節錄必要項）
 # --------------------------------------------------------------------------
-LOG_ROOT      = Path("logs")
+LOG_ROOT = Path("logs")
+REPO_ROOT = Path(__file__).resolve().parent
 MODEL_ROOT: Dict[str, Path] = {
-    "gym": Path("/Users/hopohan/Desktop/k8s/gym-hpa"),
-    "grl": Path("/Users/hopohan/Desktop/k8s/GRLScaler"),
+    # default to paths relative to this script so the repo can be cloned
+    # anywhere without manual edits
+    "gym": REPO_ROOT / "gym_hpa",
+    "grl": REPO_ROOT,
 }
 
 NAMESPACE     = "onlineboutique"

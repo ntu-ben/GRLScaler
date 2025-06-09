@@ -19,6 +19,9 @@ python rl_batch_loadtest.py --model grl --tag myrun
 
 若採用兩台電腦進行分散式負載測試，將 `M1_HOST` 環境變數設為遠端 agent 的位址，腳本會自動呼叫該節點執行 Locust。
 
+若想以手動方式啟動長時間壓測，可執行 `loadtest/locust_agent_manual.py`，
+預設持續 24 小時。
+
 所有測試紀錄會輸出至 `logs/<tag>/` 目錄。
 
 ## 專案結構
