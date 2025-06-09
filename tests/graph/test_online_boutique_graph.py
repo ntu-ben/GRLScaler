@@ -4,8 +4,8 @@ np = pytest.importorskip("numpy")
 pandas = pytest.importorskip("pandas")
 gym = pytest.importorskip("gym")  # gym is a dependency of the env
 
-from gym_hpa.envs.online_boutique import OnlineBoutique, DEPLOYMENTS
-from gym_hpa.envs import deployment, online_boutique
+from gnn_rl_env.envs.online_boutique import OnlineBoutique, DEPLOYMENTS
+from gnn_rl_env.envs import deployment, online_boutique
 
 
 def test_fetch_service_graph(monkeypatch):

@@ -10,7 +10,7 @@ This directory contains scripts for running Locust-based load tests.
 
 `locust_agent_manual.py` launches Locust locally without the REST API. It
 searches for the `locust` binary in `PATH` and starts the specified scenario in
-headless mode. Logs and reports are written to `remote_logs/<tag>/`.
+headless mode. Logs and reports are written to `remote_logs/<method>/<tag>/`.
 
 ### Usage
 
@@ -20,7 +20,7 @@ python loadtest/locust_agent_manual.py --tag myrun \
        --run-time 24h
 ```
 
-- `--tag`        A folder name under `remote_logs/` for output.
+- `--tag`        A folder name under `remote_logs/<method>/` for output.
 - `--scenario`   One of the scripts in `onlineboutique/` without the prefix
                   `locust_` (e.g. `peak`, `offpeak`).
 - `--target-host` Target service URL passed to Locust via `--host`.

@@ -11,14 +11,14 @@ from gym import spaces
 from gym.utils import seeding
 from datetime import datetime
 
-from gym_hpa.envs.deployment import (
+from .deployment import (
     get_max_cpu,
     get_max_mem,
     get_max_traffic,
     get_redis_deployment_list,
     get_linkerd_service_graph,
 )
-from gym_hpa.envs.util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
+from .util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
 
 # MIN and MAX Replication
 MIN_REPLICATION = 1
