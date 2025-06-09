@@ -7,10 +7,14 @@ class MyUser(HttpUser):
         self.client.get("/cart")
 
 class PeakShape(LoadTestShape):
-    TOTAL_RUN_TIME = 15 * 60
+    """Constant peak load.
+
+    This shape originally stopped after 15 minutes. To support long-running
+    tests (e.g. 24 hours from ``locust_agent_manual.py``), we keep spawning a
+    fixed number of users until Locust's own ``--run-time`` ends.
+    """
+
     def tick(self):
-        if self.get_run_time() < self.TOTAL_RUN_TIME:
-            # 500 users → 約 500 RPS
-            return (500, 500)
-        return None
+        # 500 users → 約 500 RPS
+        return (500, 500)
 
