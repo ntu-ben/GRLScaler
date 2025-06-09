@@ -7,10 +7,14 @@ class MyUser(HttpUser):
         self.client.get("/cart")
 
 class OffPeakShape(LoadTestShape):
-    TOTAL_RUN_TIME = 15 * 60      # 15 分鐘
+    """Constant low traffic.
+
+    The previous implementation stopped after ``TOTAL_RUN_TIME``. To allow
+    extended runs, we simply maintain the off‑peak user count until Locust
+    exits on its own.
+    """
+
     def tick(self):
-        if self.get_run_time() < self.TOTAL_RUN_TIME:
-            # 50 users → 約 50 RPS
-            return (50, 50)        # (target_user_count, spawn_rate)
-        return None                 # 結束測試
+        # 50 users → 約 50 RPS (spawn_rate = users)
+        return (50, 50)
 

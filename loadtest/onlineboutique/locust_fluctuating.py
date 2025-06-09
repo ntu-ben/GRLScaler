@@ -8,12 +8,13 @@ class MyUser(HttpUser):
 
 class FluctuatingShape(LoadTestShape):
     PHASE_DURATION = (15 * 60) / 4
+
     def tick(self):
-        t = self.get_run_time()
-        if t >= 15 * 60:
-            return None
+        """Fluctuating traffic pattern that loops every 15 minutes."""
+
+        t = self.get_run_time() % (15 * 60)
         phase = int(t // self.PHASE_DURATION)
-        # 四個階段 user 數：[50, 1000, 50, 3000]
+        # 四個階段 user 數：[50, 300, 50, 800]
         users = [50, 300, 50, 800][phase]
         return (users, users)
 
