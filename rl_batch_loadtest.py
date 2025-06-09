@@ -3,7 +3,7 @@
 rl_batch_loadtest.py  v4.2  (2025-06-06)
 ────────────────────────────────────────────────────────────────────────────
 功能摘要
-• --model {gym,grl,gwydion,hpa} 決定 repo 路徑；grl 自動加 --gnn_mode
+• --model {gym,gym-hpa,grl,gwydion,hpa} 決定 repo 路徑；grl 自動加 --gnn_mode
 • 讀取 .env → M1_HOST=http://<m1-ip>:8099 ；遠端 locust 連不上才 fallback 本機
 • 清洗 argv 中意外的 "\" / "\n" token
 • 建立 logs/<run-tag>/batch.log，任何例外都同步寫 console + log
@@ -36,6 +36,7 @@ MODEL_ROOT: Dict[str, Path] = {
     # default to paths relative to this script so the repo can be cloned
     # anywhere without manual edits
     "gym": REPO_ROOT / "gnn_rl_env",
+    "gym-hpa": REPO_ROOT / "gym-hpa",
     "grl": REPO_ROOT,
     # gwydion submodule contains its own package under "gwydion" folder
     "gwydion": REPO_ROOT / "gwydion" / "gwydion",
@@ -201,7 +202,7 @@ def main() -> None:
     try:
         # 3-1 argparse（先把髒 token 清掉）
         ap = argparse.ArgumentParser()
-        ap.add_argument("--model", choices=["gym", "grl", "gwydion", "hpa"], required=True)
+        ap.add_argument("--model", choices=["gym", "gym-hpa", "grl", "gwydion", "hpa"], required=True)
         ap.add_argument("--rl-path")          # 可手動覆蓋 repo
         ap.add_argument("--run-tag")
         ap.add_argument("--alg", choices=["ppo", "recurrent_ppo", "a2c"], default="ppo")
@@ -224,6 +225,8 @@ def main() -> None:
         rl_cwd = Path(args.rl_path) if args.rl_path else MODEL_ROOT[args.model]
         if args.model == "gwydion":
             run_file = rl_cwd / "run.py"
+        elif args.model == "gym-hpa":
+            run_file = rl_cwd / "policies" / "run" / "run.py"
         elif args.model == "hpa":
             run_file = rl_cwd / "HPABaseLineTest.py"
         else:
