@@ -22,13 +22,29 @@ python rl_batch_loadtest.py --model grl --tag myrun
 若想以手動方式啟動長時間壓測，可執行 `loadtest/locust_agent_manual.py`，
 預設持續 24 小時。
 
-所有測試紀錄會輸出至 `logs/<tag>/` 目錄。
+所有測試紀錄會輸出至 `logs/<method>/<tag>/` 目錄，其中 `method` 可能為
+`grl`、`gym`、`gwydion` 或 `hpa`。HPA baseline 的結果將存放在
+`logs/hpa/<hpa-name>/`。
+
+### 主要環境變數
+
+所有腳本可從 `.env` 讀取設定，下表列出常用變數：
+
+| 變數 | 用途 |
+|------|------|
+| `TARGET_HOST` | Locust 測試目標服務 URL |
+| `M1_HOST` | 遠端 Locust agent 位址（選用） |
+| `PROMETHEUS_URL` | gnn_rl_env 查詢 Prometheus 用 |
+| `KUBE_HOST` | gnn_rl_env 連線至 Kubernetes proxy |
+| `LINKERD_VIZ_API_URL` | 取得 RPS 等指標 |
+| `LOCUST_RUN_TIME` | 每次 Locust 執行的持續時間 |
+| `NAMESPACE_REDIS`、`NAMESPACE_ONLINEBOUTIQUE` | 各範例對應的命名空間 |
 
 ## 專案結構
 
 ```
 gnn_rl/        # 強化學習策略與訓練程式
-gym_hpa/       # 取自 gym-hpa 的環境實作
+gnn_rl_env/    # 取自 gym-hpa 的環境實作
 loadtest/      # Locust 測試腳本與遠端 agent
 macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等）
 ```

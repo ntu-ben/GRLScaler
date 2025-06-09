@@ -10,7 +10,7 @@ Batch load‑test runner for Online Boutique (one‑shot, no retry on Locust fa
 * 失敗或產生不到 CSV 時，會寫 warning，但流程持續到下一 scenario/HPA。
 * 結束後產生 `logs/<hpa>/summary.csv` 與 `logs/aggregate.html`。
 """
-import subprocess, datetime as dt, time, logging, sys
+import subprocess, datetime as dt, time, logging, sys, os
 from pathlib import Path
 
 import pandas as pd
@@ -18,7 +18,7 @@ import requests
 from jinja2 import Template
 
 # ── configuration ─────────────────────────────────────────────────────────
-NAMESPACE     = "onlineboutique"
+NAMESPACE     = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
 # 根目錄 (此檔案位於 repo/k8s_hpa/)
 REPO_ROOT     = Path(__file__).resolve().parents[1]
 # Online Boutique 原始碼路徑，可依需要調整
@@ -38,8 +38,8 @@ LOCUST_SCRIPTS = {
     "peak":         "locust_peak.py",
     "fluctuating":  "locust_fluctuating.py",
 }
-RUN_TIME = "15m"
-LOG_ROOT = Path("logs")
+RUN_TIME = os.getenv("LOCUST_RUN_TIME", "15m")
+LOG_ROOT = Path("logs") / "hpa"
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s",
@@ -162,8 +162,8 @@ def main():
 
     df_master = pd.DataFrame(master_rows)
     df_master.to_csv(LOG_ROOT/"master_summary.csv", index=False)
-    render_dashboard(df_master)
-    logging.info("✅ All tests done → logs/aggregate.html")
+    render_dashboard(df_master, LOG_ROOT)
+    logging.info("✅ All tests done → %s", (LOG_ROOT/"aggregate.html").resolve())
 
 # ── dashboard ──────────────────────────────────────────────────────────
 

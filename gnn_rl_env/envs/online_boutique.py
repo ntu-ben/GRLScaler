@@ -12,14 +12,14 @@ from gym import spaces
 from gym.utils import seeding
 
 # Number of Requests - Discrete Event
-from gym_hpa.envs.deployment import (
+from .deployment import (
     get_max_cpu,
     get_max_mem,
     get_max_traffic,
     get_online_boutique_deployment_list,
     get_linkerd_service_graph,
 )
-from gym_hpa.envs.util import save_to_csv, get_num_pods, get_cost_reward, \
+from .util import save_to_csv, get_num_pods, get_cost_reward, \
     get_latency_reward_online_boutique
 
 # MIN and MAX Replication

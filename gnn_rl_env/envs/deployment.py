@@ -27,10 +27,10 @@ CPU_WEIGHT = 0.7
 MEM_WEIGHT = 0.3
 
 # port-forward in k8s cluster
-PROMETHEUS_URL = 'http://localhost:9090/'
+PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://localhost:9090/')
 
 # Endpoint of your Kube cluster: kube proxy enabled
-HOST = "http://localhost:8001"
+HOST = os.getenv('KUBE_HOST', 'http://localhost:8001')
 
 # Linkerd viz edges API base URL
 # metrics-api service usually runs at http://metrics-api.linkerd-viz.svc.cluster.local:8085
