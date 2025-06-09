@@ -27,8 +27,10 @@ locust_cyclic.py  – Unified 15‑minute cyclic workload for Online Boutique
 from math import sin, pi
 from random import choice
 import os
-from locust import HttpUser, task, between
-from locust.runners import LoadTestShape
+# `LoadTestShape` was previously imported from `locust.runners`, but newer
+# versions of Locust expose it directly under ``locust``. Importing from the
+# old module causes ``ImportError`` during execution.
+from locust import HttpUser, task, between, LoadTestShape
 
 # ╭─ Config ────────────────────────────────────────────────────────────────╮
 DEFAULT_HOST = "http://localhost:80"
