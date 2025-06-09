@@ -1,3 +1,6 @@
 [submodule "MicroServiceBenchmark/microservices-demo"]
 	path = MicroServiceBenchmark/microservices-demo
 	url = https://github.com/GoogleCloudPlatform/microservices-demo
+[submodule "gwydion"]
+	path = gwydion
+	url = https://github.com/jpedro1992/gwydion.git
