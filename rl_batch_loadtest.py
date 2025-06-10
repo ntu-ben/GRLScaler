@@ -56,7 +56,13 @@ SCENARIOS = {
     "rushsale":    "locust_rushsale.py",
     "peak":        "locust_peak.py",
     "fluctuating": "locust_fluctuating.py",
+    "cyclic":      "locust_cyclic.py",
 }
+_MULT = {"s": 1, "m": 60, "h": 3600}
+_match = __import__("re").match
+_rt = _match(r"(\d+)([smh])", RUN_TIME)
+RUN_TIME_SEC = int(_rt.group(1)) * _MULT[_rt.group(2)] if _rt else 900
+HALF_RUN_SEC = RUN_TIME_SEC // 2
 MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -76,6 +82,18 @@ def sh(cmd: List[str]) -> None:
     """列印並執行 shell 指令；失敗 raise"""
     logging.info("$ %s", " ".join(map(str, cmd)))
     subprocess.run(cmd, check=True)
+
+
+def record_linkerd_stat(stage: str) -> None:
+    """Record Linkerd stats for deployments."""
+    logging.info("linkerd stat (%s)", stage)
+    try:
+        sh([
+            "linkerd", "viz", "stat", "deploy", "-n", NAMESPACE,
+            "--api-addr", "localhost:8085",
+        ])
+    except subprocess.CalledProcessError as err:
+        logging.warning("linkerd stat failed: %s", err)
 
 
 def get_linkerd_rps(namespace: str = NAMESPACE) -> float | None:
@@ -137,6 +155,9 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             r.raise_for_status()
             job_id = r.json()["job_id"]
             logging.debug("job id %s", job_id)
+            record_linkerd_stat("start")
+            time.sleep(HALF_RUN_SEC)
+            record_linkerd_stat("mid")
             for _ in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
@@ -148,6 +169,7 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             else:
                 logging.warning("remote locust did not finish in time")
                 return
+            record_linkerd_stat("end")
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 resp = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if resp.status_code == 200:
@@ -166,7 +188,14 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
         "--csv", out_dir / scenario, "--csv-full-history",
         "--html", out_dir / f"{scenario}.html",
     ]
-    sh(cmd)
+    proc = subprocess.Popen(cmd)
+    record_linkerd_stat("start")
+    time.sleep(HALF_RUN_SEC)
+    record_linkerd_stat("mid")
+    proc.wait()
+    record_linkerd_stat("end")
+    if proc.returncode:
+        logging.warning("Locust %s finished with exit-code %s", scenario, proc.returncode)
 
 
 def summarise(run_tag: str, scenario_dirs: list[Path], namespace: str) -> pd.DataFrame:
