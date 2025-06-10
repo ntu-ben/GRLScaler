@@ -50,6 +50,7 @@ LOCUST_SCRIPTS = {
 }
 RUN_TIME = os.getenv("LOCUST_RUN_TIME", "15m")
 LOG_ROOT = Path("../logs") / "hpa"
+MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s",
@@ -137,12 +138,15 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
                 sh(["linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085"])
             except subprocess.CalledProcessError as err:
                 logging.warning("linkerd stat failed: %s", err)
-            while True:
+            for _ in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
                 st.raise_for_status()
                 if st.json().get("finished"):
                     break
+            else:
+                logging.warning("remote locust did not finish in time")
+                return
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 r = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if r.status_code == 200:

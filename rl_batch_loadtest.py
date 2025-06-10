@@ -57,6 +57,7 @@ SCENARIOS = {
     "peak":        "locust_peak.py",
     "fluctuating": "locust_fluctuating.py",
 }
+MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
 
 # ──────────────────────────────────────────────────────────────────────────
 # 2. 小工具
@@ -136,7 +137,7 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             r.raise_for_status()
             job_id = r.json()["job_id"]
             logging.debug("job id %s", job_id)
-            while True:
+            for _ in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
                 st.raise_for_status()
@@ -144,6 +145,9 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
                 logging.debug("status %s -> %s", job_id, data)
                 if data.get("finished"):
                     break
+            else:
+                logging.warning("remote locust did not finish in time")
+                return
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 resp = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if resp.status_code == 200:
