@@ -48,7 +48,7 @@ LOCUST_SCRIPTS = {
     "fluctuating":  "locust_fluctuating.py",
 }
 RUN_TIME = os.getenv("LOCUST_RUN_TIME", "15m")
-LOG_ROOT = Path("logs") / "hpa"
+LOG_ROOT = Path("../logs") / "hpa"
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s",
