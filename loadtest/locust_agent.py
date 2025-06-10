@@ -3,7 +3,7 @@
 locust_agent.py – REST API for triggering Locust runs
 """
 
-import subprocess, shutil, uuid, os, datetime as dt, logging
+import subprocess, shutil, uuid, os, datetime as dt, logging, re
 from pathlib import Path
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
@@ -32,6 +32,24 @@ class JobReq(BaseModel):
 
 jobs = {}   # job_id -> {"path":…, "ret":returncode}
 
+def _parse_timespan(spec: str) -> int:
+    """Return `spec` in seconds. Supports <num>[smhd] groups."""
+    total = 0
+    for amount, unit in re.findall(r"(\d+)([smhd])", spec):
+        val = int(amount)
+        if unit == "s":
+            total += val
+        elif unit == "m":
+            total += val * 60
+        elif unit == "h":
+            total += val * 3600
+        elif unit == "d":
+            total += val * 86400
+    if total == 0 and spec.isdigit():
+        total = int(spec)
+    return total
+
+
 def _run_locust(job_id: str, req: JobReq):
     out_dir = LOG_ROOT / req.tag
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -43,7 +61,20 @@ def _run_locust(job_id: str, req: JobReq):
         "--html", out_dir / f"{req.scenario}.html"
     ]
     logging.debug("$ %s", " ".join(map(str, cmd)))
-    rc = subprocess.call(cmd)
+    proc = subprocess.Popen(cmd)
+    timeout = _parse_timespan(req.run_time)
+    logging.debug("locust timeout set to %ss", timeout)
+    try:
+        rc = proc.wait(timeout=timeout if timeout else None)
+    except subprocess.TimeoutExpired:
+        logging.info("timeout reached, terminating locust")
+        proc.terminate()
+        try:
+            rc = proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            logging.warning("kill hung locust")
+            proc.kill()
+            rc = proc.wait()
     logging.debug("locust finished with rc=%s", rc)
     jobs[job_id]["ret"] = rc
 
