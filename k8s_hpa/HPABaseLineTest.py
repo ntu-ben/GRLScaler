@@ -18,7 +18,9 @@ import requests
 from jinja2 import Template
 
 # ── configuration ─────────────────────────────────────────────────────────
-NAMESPACE     = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
+NAMESPACE_OB  = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
+NAMESPACE_REDIS = os.getenv("NAMESPACE_REDIS", "redis")
+NAMESPACE     = NAMESPACE_OB
 # 根目錄 (此檔案位於 repo/k8s_hpa/)
 REPO_ROOT     = Path(__file__).resolve().parents[1]
 # Online Boutique 原始碼路徑，可依需要調整
@@ -60,6 +62,9 @@ def sh(cmd, **kw):
 def reset_demo():
     sh(["kubectl", "delete", "-f", MANIFEST_YAML, "-n", NAMESPACE], cwd=MICRO_DEMO)
     sh(["kubectl", "apply",  "-f", MANIFEST_YAML, "-n", NAMESPACE], cwd=MICRO_DEMO)
+    # re-inject Linkerd sidecar for monitoring
+    cmd = "kubectl get deploy -n {} -o yaml | linkerd inject - | kubectl apply -f -".format(NAMESPACE)
+    sh(cmd, shell=True)
 
 
 def apply_hpa(folder: Path):
@@ -100,10 +105,15 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
            "--host", TARGET_HOST,
            "--csv", csv_prefix, "--csv-full-history",
            "--html", html_file]
+    proc = subprocess.Popen(cmd)
+    time.sleep(450)
     try:
-        sh(cmd)
+        sh(["linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085"])
     except subprocess.CalledProcessError as err:
-        logging.warning("Locust %s finished with exit-code %s (failures present)", scenario, err.returncode)
+        logging.warning("linkerd stat failed: %s", err)
+    proc.wait()
+    if proc.returncode:
+        logging.warning("Locust %s finished with exit-code %s (failures present)", scenario, proc.returncode)
 
 
 def summarise(hpa: str, scenario_dirs: list[Path]):
