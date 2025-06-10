@@ -47,8 +47,14 @@ LOCUST_SCRIPTS = {
     "rushsale":     "locust_rushsale.py",
     "peak":         "locust_peak.py",
     "fluctuating":  "locust_fluctuating.py",
+    "cyclic":       "locust_cyclic.py",
 }
 RUN_TIME = os.getenv("LOCUST_RUN_TIME", "15m")
+_MULT = {"s": 1, "m": 60, "h": 3600}
+_match = __import__("re").match
+_rt = _match(r"(\d+)([smh])", RUN_TIME)
+RUN_TIME_SEC = int(_rt.group(1)) * _MULT[_rt.group(2)] if _rt else 900
+HALF_RUN_SEC = RUN_TIME_SEC // 2
 LOG_ROOT = Path("../logs") / "hpa"
 MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
 
@@ -66,6 +72,18 @@ def sh(cmd, **kw):
         printable = cmd
     logging.info("$ %s", printable)
     subprocess.run(cmd, check=True, **kw)
+
+
+def record_linkerd_stat(stage: str) -> None:
+    """Record Linkerd stats for deployments."""
+    logging.info("linkerd stat (%s)", stage)
+    try:
+        sh([
+            "linkerd", "viz", "stat", "deploy", "-n", NAMESPACE,
+            "--api-addr", "localhost:8085",
+        ])
+    except subprocess.CalledProcessError as err:
+        logging.warning("linkerd stat failed: %s", err)
 
 
 def reset_demo():
@@ -129,15 +147,13 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
         }
         logging.info("Trigger remote locust %s on %s", scenario, host)
         logging.debug("POST %s/start %s", host, payload)
+        record_linkerd_stat("start")
         try:
             resp = requests.post(f"{host}/start", json=payload, timeout=10)
             resp.raise_for_status()
             job_id = resp.json()["job_id"]
-            time.sleep(450)
-            try:
-                sh(["linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085"])
-            except subprocess.CalledProcessError as err:
-                logging.warning("linkerd stat failed: %s", err)
+            time.sleep(HALF_RUN_SEC)
+            record_linkerd_stat("mid")
             for _ in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
@@ -147,6 +163,7 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
             else:
                 logging.warning("remote locust did not finish in time")
                 return
+            record_linkerd_stat("end")
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 r = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if r.status_code == 200:
@@ -165,14 +182,11 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
         "--html", html_file,
     ]
     proc = subprocess.Popen(cmd)
-    time.sleep(450)
-    try:
-        sh([
-            "linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085",
-        ])
-    except subprocess.CalledProcessError as err:
-        logging.warning("linkerd stat failed: %s", err)
+    record_linkerd_stat("start")
+    time.sleep(HALF_RUN_SEC)
+    record_linkerd_stat("mid")
     proc.wait()
+    record_linkerd_stat("end")
     if proc.returncode:
         logging.warning(
             "Locust %s finished with exit-code %s (failures present)", scenario, proc.returncode
