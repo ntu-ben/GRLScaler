@@ -71,7 +71,15 @@ def reset_demo():
     sh(["kubectl", "apply",  "-f", MANIFEST_YAML, "-n", NAMESPACE], cwd=MICRO_DEMO)
     # re-inject Linkerd sidecar for monitoring
     cmd = "kubectl get deploy -n {} -o yaml | linkerd inject - | kubectl apply -f -".format(NAMESPACE)
-    sh(cmd, shell=True)
+    for i in range(5):
+        try:
+            sh(cmd, shell=True)
+            break
+        except subprocess.CalledProcessError as err:
+            if i == 4:
+                raise
+            logging.warning("Linkerd inject failed (%d/5): %s", i + 1, err)
+            time.sleep(3)
 
 
 def apply_hpa(folder: Path):
