@@ -13,6 +13,12 @@ Batch load‑test runner for Online Boutique (one‑shot, no retry on Locust fa
 import subprocess, datetime as dt, time, logging, sys, os
 from pathlib import Path
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
+except ModuleNotFoundError:
+    pass
+
 import pandas as pd
 import requests
 from jinja2 import Template
@@ -28,7 +34,8 @@ MICRO_DEMO    = REPO_ROOT / "MicroServiceBenchmark" / "microservices-demo"
 MANIFEST_YAML = MICRO_DEMO / "release" / "kubernetes-manifests.yaml"
 # HPA YAML 目錄移至 repo/macK8S/HPA/onlineboutique
 HPA_ROOT      = REPO_ROOT / "macK8S" / "HPA" / "onlineboutique"
-LOCUST_ROOT   = Path(__file__).resolve().parent / "stressTest" / "onlineboutique"
+# Scenario scripts are shared with rl_batch_loadtest under loadtest/onlineboutique
+LOCUST_ROOT   = REPO_ROOT / "loadtest" / "onlineboutique"
 TARGET_HOST   = "http://frontend.onlineboutique.svc.cluster.local"
 HEALTH_PATH   = "/"
 HTTP_TIMEOUT  = 600   # wait up to 10 min for 200 OK
@@ -97,23 +104,65 @@ def wait_frontend_ready():
 
 
 def run_locust_once(scenario: str, script: Path, out_dir: Path):
-    """Run Locust exactly once, regardless of failure rate. Exit‑code≠0 只記錄警告。"""
+    """Run Locust exactly once, optionally via the remote agent."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    host = os.getenv("M1_HOST")
+    if host:
+        host = host.rstrip("/")
+        tag = f"hpa_{scenario}_{int(time.time())}"
+        payload = {
+            "tag": tag,
+            "scenario": scenario,
+            "target_host": TARGET_HOST,
+            "run_time": RUN_TIME,
+        }
+        logging.info("Trigger remote locust %s on %s", scenario, host)
+        logging.debug("POST %s/start %s", host, payload)
+        try:
+            resp = requests.post(f"{host}/start", json=payload, timeout=10)
+            resp.raise_for_status()
+            job_id = resp.json()["job_id"]
+            time.sleep(450)
+            try:
+                sh(["linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085"])
+            except subprocess.CalledProcessError as err:
+                logging.warning("linkerd stat failed: %s", err)
+            while True:
+                time.sleep(5)
+                st = requests.get(f"{host}/status/{job_id}", timeout=10)
+                st.raise_for_status()
+                if st.json().get("finished"):
+                    break
+            for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
+                r = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
+                if r.status_code == 200:
+                    (out_dir / fname).write_bytes(r.content)
+            return
+        except requests.RequestException as exc:
+            logging.error("remote locust failed: %s", exc)
+            logging.info("Fallback to local locust")
+
     csv_prefix = out_dir / scenario
-    html_file  = out_dir / f"{scenario}.html"
-    cmd = ["locust", "-f", script, "--headless", "--run-time", RUN_TIME,
-           "--host", TARGET_HOST,
-           "--csv", csv_prefix, "--csv-full-history",
-           "--html", html_file]
+    html_file = out_dir / f"{scenario}.html"
+    cmd = [
+        "locust", "-f", script, "--headless", "--run-time", RUN_TIME,
+        "--host", TARGET_HOST,
+        "--csv", csv_prefix, "--csv-full-history",
+        "--html", html_file,
+    ]
     proc = subprocess.Popen(cmd)
     time.sleep(450)
     try:
-        sh(["linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085"])
+        sh([
+            "linkerd", "viz", "stat", "deploy", "-n", NAMESPACE, "--api-addr", "localhost:8085",
+        ])
     except subprocess.CalledProcessError as err:
         logging.warning("linkerd stat failed: %s", err)
     proc.wait()
     if proc.returncode:
-        logging.warning("Locust %s finished with exit-code %s (failures present)", scenario, proc.returncode)
+        logging.warning(
+            "Locust %s finished with exit-code %s (failures present)", scenario, proc.returncode
+        )
 
 
 def summarise(hpa: str, scenario_dirs: list[Path]):

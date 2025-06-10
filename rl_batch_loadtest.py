@@ -148,19 +148,20 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
                 if resp.status_code == 200:
                     logging.debug("downloaded %s", fname)
                     (out_dir / fname).write_bytes(resp.content)
+            return
         except requests.RequestException as exc:
             logging.error("remote locust failed: %s", exc)
-            raise
-    else:
-        script = Path(__file__).parent / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
-        logging.info("Run local locust %s", scenario)
-        cmd = [
-            "locust", "-f", script, "--headless", "--run-time", RUN_TIME,
-            "--host", TARGET_HOST,
-            "--csv", out_dir / scenario, "--csv-full-history",
-            "--html", out_dir / f"{scenario}.html",
-        ]
-        sh(cmd)
+            logging.info("Fallback to local locust")
+
+    script = Path(__file__).parent / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+    logging.info("Run local locust %s", scenario)
+    cmd = [
+        "locust", "-f", script, "--headless", "--run-time", RUN_TIME,
+        "--host", TARGET_HOST,
+        "--csv", out_dir / scenario, "--csv-full-history",
+        "--html", out_dir / f"{scenario}.html",
+    ]
+    sh(cmd)
 
 
 def summarise(run_tag: str, scenario_dirs: list[Path], namespace: str) -> pd.DataFrame:
