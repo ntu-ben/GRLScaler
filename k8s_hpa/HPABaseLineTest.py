@@ -37,10 +37,10 @@ MANIFEST_YAML = MICRO_DEMO / "release" / "kubernetes-manifests.yaml"
 HPA_ROOT      = REPO_ROOT / "macK8S" / "HPA" / "onlineboutique"
 # Scenario scripts are shared with rl_batch_loadtest under loadtest/onlineboutique
 LOCUST_ROOT   = REPO_ROOT / "loadtest" / "onlineboutique"
-TARGET_HOST   = "http://frontend.onlineboutique.svc.cluster.local"
+TARGET_HOST   = "http://k8s.orb.local"
 HEALTH_PATH   = "/"
 HTTP_TIMEOUT  = 600   # wait up to 10 min for 200 OK
-COOLDOWN_SEC  = 150   # 2.5 min between scenarios
+COOLDOWN_SEC  = 60   # 1 min between scenarios
 
 LOCUST_SCRIPTS = {
     "offpeak":      "locust_offpeak.py",
