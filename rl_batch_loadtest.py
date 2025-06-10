@@ -20,10 +20,11 @@ from jinja2 import Template
 # ──────────────────────────────────────────────────────────────────────────
 # 0. 讀取 .env（若裝了 python-dotenv）
 # --------------------------------------------------------------------------
+REPO_ROOT = Path(__file__).resolve().parent
 try:
     from dotenv import load_dotenv
-    # 假設 .env 就放在腳本同目錄；如放根目錄自行修改
-    load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+    # `.env` 固定放在 repo 根目錄
+    load_dotenv(REPO_ROOT / ".env")
 except ModuleNotFoundError:
     pass  # optional
 
@@ -31,7 +32,6 @@ except ModuleNotFoundError:
 # 1. 全域常數（與舊版相同；節錄必要項）
 # --------------------------------------------------------------------------
 LOG_ROOT = Path("logs")
-REPO_ROOT = Path(__file__).resolve().parent
 MODEL_ROOT: Dict[str, Path] = {
     # default to paths relative to this script so the repo can be cloned
     # anywhere without manual edits
@@ -122,6 +122,7 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     if remote:
         host = os.environ["M1_HOST"].rstrip("/")
+        logging.info("M1_HOST=%s", host)
         logging.info("Trigger remote locust %s on %s", scenario, host)
         payload = {
             "tag": tag,

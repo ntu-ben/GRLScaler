@@ -15,6 +15,7 @@ from pathlib import Path
 
 try:
     from dotenv import load_dotenv
+    # `.env` 固定放在 repo 根目錄
     load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 except ModuleNotFoundError:
     pass
@@ -117,6 +118,7 @@ def run_locust_once(scenario: str, script: Path, out_dir: Path):
     host = os.getenv("M1_HOST")
     if host:
         host = host.rstrip("/")
+        logging.info("M1_HOST=%s", host)
         tag = f"hpa_{scenario}_{int(time.time())}"
         payload = {
             "tag": tag,

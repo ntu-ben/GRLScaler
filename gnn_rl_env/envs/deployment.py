@@ -7,7 +7,7 @@ from pathlib import Path
 import requests
 from kubernetes import client
 
-# Load environment variables from a .env file if present
+# Load environment variables from a .env file located at the repo root, if present
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 if ENV_PATH.exists():
     with open(ENV_PATH) as f:
