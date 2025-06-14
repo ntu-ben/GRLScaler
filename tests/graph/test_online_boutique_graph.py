@@ -4,14 +4,18 @@ np = pytest.importorskip("numpy")
 pandas = pytest.importorskip("pandas")
 gym = pytest.importorskip("gym")  # gym is a dependency of the env
 
-from gnn_rl_env.envs.online_boutique import OnlineBoutique, DEPLOYMENTS
-from gnn_rl_env.envs import deployment, online_boutique
+from gnn_rl.envs.online_boutique import OnlineBoutique, DEPLOYMENTS
+from gnn_rl.scraper import dataloader
 
 
 def test_fetch_service_graph(monkeypatch):
-    nodes = ["recommendationservice", "productcatalogservice"]
-    edges = [(0, 1)]
-    monkeypatch.setattr(online_boutique, "get_linkerd_service_graph", lambda namespace=None: (nodes, edges))
+    df = pandas.DataFrame({
+        "src": ["recommendationservice"],
+        "dst": ["productcatalogservice"],
+        "rps": [1.0],
+        "p99_ms": [10.0],
+    })
+    monkeypatch.setattr(dataloader, "fetch_edges", lambda namespace, **kw: df)
 
     env = OnlineBoutique(k8s=False, use_graph=True)
     adj = env._fetch_service_graph()
@@ -21,9 +25,13 @@ def test_fetch_service_graph(monkeypatch):
 
 
 def test_reset_returns_graph(monkeypatch):
-    nodes = ["recommendationservice", "productcatalogservice"]
-    edges = [(0, 1)]
-    monkeypatch.setattr(online_boutique, "get_linkerd_service_graph", lambda namespace=None: (nodes, edges))
+    df = pandas.DataFrame({
+        "src": ["recommendationservice"],
+        "dst": ["productcatalogservice"],
+        "rps": [1.0],
+        "p99_ms": [10.0],
+    })
+    monkeypatch.setattr(dataloader, "fetch_edges", lambda namespace, **kw: df)
 
     env = OnlineBoutique(k8s=False, use_graph=True)
     obs = env.reset()

@@ -34,8 +34,8 @@ python rl_batch_loadtest.py --model grl --tag myrun
 |------|------|
 | `TARGET_HOST` | Locust 測試目標服務 URL |
 | `M1_HOST` | 遠端 Locust agent 位址（選用） |
-| `PROMETHEUS_URL` | gnn_rl_env 查詢 Prometheus 用 |
-| `KUBE_HOST` | gnn_rl_env 連線至 Kubernetes proxy |
+| `PROMETHEUS_URL` | gnn_rl 查詢 Prometheus 用 |
+| `KUBE_HOST` | gnn_rl 連線至 Kubernetes proxy |
 | `LINKERD_VIZ_API_URL` | 取得 RPS 等指標 |
 | `LOCUST_RUN_TIME` | 每次 Locust 執行的持續時間 |
 | `NAMESPACE_REDIS`、`NAMESPACE_ONLINEBOUTIQUE` | 各範例對應的命名空間 |
@@ -44,7 +44,7 @@ python rl_batch_loadtest.py --model grl --tag myrun
 
 ```
 gnn_rl/        # 強化學習策略與訓練程式
-gnn_rl_env/    # 取自 gym-hpa 的環境實作
+gnn_rl/envs/   # 取自 gym-hpa 的環境實作，已併入 gnn_rl 套件
 loadtest/      # Locust 測試腳本與遠端 agent
 macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等）
 ```
@@ -53,3 +53,7 @@ macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等�
 
 ---
 本倉庫僅供研究與教學用途，歡迎提出 issue 與貢獻。
+
+## Scraper
+
+Run `python -m gnn_rl.scraper.main --ns <namespace> --once` to collect service edges and node metrics from a Linkerd + Prometheus stack. The files are stored under `datasets/scraper/` and can be loaded via `build_pyg()` for experiments.

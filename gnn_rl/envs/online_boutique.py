@@ -180,17 +180,17 @@ class OnlineBoutique(gym.Env):
 
 
     def _fetch_service_graph(self):
-        nodes, edges = get_linkerd_service_graph(namespace="onlineboutique")
-        index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
+        from gnn_rl.scraper import dataloader
+
+        edges = dataloader.fetch_edges(namespace="onlineboutique")
+        index = {name: i for i, name in enumerate(DEPLOYMENTS)}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)
-        for src, dst in edges:
-            if src >= len(nodes) or dst >= len(nodes):
-                continue
-            src_name = nodes[src]
-            dst_name = nodes[dst]
-            if src_name in index and dst_name in index:
-                adj[index[src_name], index[dst_name]] = 1
+        for _, row in edges.iterrows():
+            src = row["src"]
+            dst = row["dst"]
+            if src in index and dst in index:
+                adj[index[src], index[dst]] = 1
         return adj
 
 
