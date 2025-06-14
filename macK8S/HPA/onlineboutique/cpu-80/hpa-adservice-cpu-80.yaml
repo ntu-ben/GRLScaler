@@ -9,11 +9,12 @@ spec:
     kind: Deployment
     name: adservice
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 7
   metrics:
-  - type: Resource
-    resource:
+  - type: ContainerResource
+    containerResource:
       name: cpu
+      container: server
       target:
         type: Utilization
         averageUtilization: 80

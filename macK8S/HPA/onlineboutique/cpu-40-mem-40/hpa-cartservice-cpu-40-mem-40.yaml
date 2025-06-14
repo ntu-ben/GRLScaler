@@ -9,17 +9,19 @@ spec:
     kind: Deployment
     name: cartservice
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 7
   metrics:
-  - type: Resource
-    resource:
+  - type: ContainerResource
+    containerResource:
       name: cpu
+      container: server
       target:
         type: Utilization
         averageUtilization: 40
-  - type: Resource
-    resource:
+  - type: ContainerResource
+    containerResource:
       name: memory
+      container: server
       target:
         type: Utilization
         averageUtilization: 40
