@@ -49,6 +49,37 @@ loadtest/      # Locust 測試腳本與遠端 agent
 macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等）
 ```
 
+## 使用說明
+
+以下範例展示如何在本機快速啟用 GNN + RL 自動擴縮器。
+
+1. 安裝相依套件：
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. 啟動資料收集器（需先設定 `PROMETHEUS_URL` 與 `LINKERD_VIZ_API_URL`）：
+
+   ```bash
+   python -m data_collector.linkerd_prom --edges-url $LINKERD_VIZ_API_URL/api/edges \
+       --metrics-url $PROMETHEUS_URL/api/v1/query
+   ```
+
+3. 另開終端執行訓練：
+
+   ```bash
+   python scripts/train_gnnppo.py --model gat --steps 100000
+   ```
+
+4. 訓練完成後可執行基準測試：
+
+   ```bash
+   python scripts/benchmark.py --steps 10000 --seeds 3
+   ```
+
+更多使用情境與真實叢集設定，請參考 [docs/Operating_Guide.md](docs/Operating_Guide.md)。
+
 ## GNN + RL Autoscaler 架構指引
 
 專案已將原 `gnn_rl_env` 環境整合至 `gnn_rl.envs`，可依照下列流程建置 GNN + RL 自動擴縮器。
