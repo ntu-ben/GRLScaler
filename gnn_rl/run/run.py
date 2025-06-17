@@ -5,7 +5,7 @@ from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
 import torch 
 
-from gnn_rl_env.envs import Redis, OnlineBoutique
+from gnn_rl.envs import Redis, OnlineBoutique
 from stable_baselines3.common.callbacks import CheckpointCallback
 
 # Logging

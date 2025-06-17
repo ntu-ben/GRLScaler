@@ -1,0 +1,5 @@
+{
+  "svc": [{"cpu": 0.5, "mem": 0.7, "p95_latency": 1.0, "stateful": 0, "rue": 0.1}],
+  "node": [{"avail_cpu": 0.8, "avail_mem": 1.5, "cpu_model_id": 1}],
+  "scalar": [0.3, 0.2]
+}
