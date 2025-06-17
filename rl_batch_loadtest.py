@@ -35,7 +35,7 @@ LOG_ROOT = Path("logs")
 MODEL_ROOT: Dict[str, Path] = {
     # default to paths relative to this script so the repo can be cloned
     # anywhere without manual edits
-    "gym": REPO_ROOT / "gnn_rl_env",
+    "gym": REPO_ROOT / "gnn_rl/envs",
     "gym-hpa": REPO_ROOT / "gym-hpa",
     "grl": REPO_ROOT,
     # gwydion submodule contains its own package under "gwydion" folder
