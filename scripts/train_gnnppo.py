@@ -3,6 +3,8 @@ from datetime import datetime
 
 import pandas as pd
 from stable_baselines3 import PPO
+import torch
+from torch_geometric.utils import dense_to_sparse
 
 from gnn_rl.envs import Redis
 from gnn_rl.agents.ppo_gnn import GNNPPOPolicy
@@ -17,10 +19,21 @@ def main():
 
     env = Redis(use_graph=True)
     sample = env.reset()
-    svc_df = pd.DataFrame(sample.get("svc_df", []))
-    node_df = pd.DataFrame(sample.get("node_df", []))
-    edge_df = pd.DataFrame(sample.get("edge_df", []))
-    metadata = build_hetero_data(svc_df, node_df, edge_df).metadata()
+
+    # Convert raw observation to DataFrames for HeteroData
+    node_feats = pd.DataFrame(sample["node_features"])  # service-level metrics
+    edge_index, edge_attr = dense_to_sparse(torch.tensor(sample["adjacency"]))
+    edge_df = pd.DataFrame({
+        "src": edge_index[0].numpy(),
+        "dst": edge_index[1].numpy(),
+    })
+    if edge_attr.numel() > 0:
+        edge_df["weight"] = edge_attr.numpy()
+
+    # Node features are empty for this env
+    node_df = pd.DataFrame()
+
+    metadata = build_hetero_data(node_feats, node_df, edge_df).metadata()
 
     log_dir = f"runs/gnnppo/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
