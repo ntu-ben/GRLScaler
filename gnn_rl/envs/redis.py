@@ -16,7 +16,7 @@ from .deployment import (
     get_max_mem,
     get_max_traffic,
     get_redis_deployment_list,
-    get_linkerd_service_graph,
+    get_kiali_service_graph,
 )
 from .util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
 
@@ -150,7 +150,7 @@ class Redis(gym.Env):
                               + self.name + '_' + 'observation.csv')
 
     def _fetch_service_graph(self):
-        nodes, edges = get_linkerd_service_graph(namespace="redis")
+        nodes, edges = get_kiali_service_graph(namespace="redis")
         index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)

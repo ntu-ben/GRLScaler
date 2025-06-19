@@ -84,43 +84,40 @@ def sh(cmd: List[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
-def record_linkerd_stat(stage: str) -> None:
-    """Record Linkerd stats for deployments."""
-    logging.info("linkerd stat (%s)", stage)
+def record_kiali_graph(stage: str) -> None:
+    """Dump Kiali service graph for the namespace."""
+    logging.info("kiali graph (%s)", stage)
+    url = f"{os.getenv('KIALI_URL', 'http://localhost:30326/kiali')}/api/namespaces/{NAMESPACE}/graph"
     try:
-        sh([
-            "linkerd", "viz", "stat", "deploy", "-n", NAMESPACE,
-            "--api-addr", "localhost:8085",
-        ])
-    except subprocess.CalledProcessError as err:
-        logging.warning("linkerd stat failed: %s", err)
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        Path(f"kiali_{stage}.json").write_text(resp.text, encoding="utf-8")
+    except Exception as err:
+        logging.warning("kiali graph failed: %s", err)
 
 
-def get_linkerd_rps(namespace: str = NAMESPACE) -> float | None:
-    """Query Linkerd stats and return average RPS for all deployments."""
-    api_addr = os.getenv("LINKERD_VIZ_API_URL", "localhost:8085")
-    cmd = [
-        "linkerd", "viz", "stat", "deploy", "-n", namespace,
-        "--api-addr", api_addr,
-    ]
+def get_kiali_rps(namespace: str = NAMESPACE) -> float | None:
+    """Query Kiali metrics and return average RPS for all workloads."""
+    url = f"{os.getenv('KIALI_URL', 'http://localhost:30326/kiali')}/api/namespaces/{namespace}/metrics?metrics=request_count"
     try:
-        out = subprocess.check_output(cmd, text=True)
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
     except Exception as exc:
-        logging.warning("linkerd stat failed: %s", exc)
+        logging.warning("kiali metrics failed: %s", exc)
         return None
-    rps_vals = []
-    for line in out.splitlines():
-        parts = line.split()
-        if not parts or parts[0] == "NAME" or parts[0].startswith("--"):
-            continue
-        if len(parts) >= 4:
+    series = resp.json().get("metrics", {}).get("request_count", [])
+    total = 0.0
+    count = 0
+    for item in series:
+        for _, val in item.get("values", []):
             try:
-                rps_vals.append(float(parts[3]))
-            except ValueError:
+                total += float(val)
+                count += 1
+            except (TypeError, ValueError):
                 continue
-    if not rps_vals:
+    if count == 0:
         return None
-    return sum(rps_vals) / len(rps_vals)
+    return total / count
 
 
 def wait_frontend_ready() -> None:
@@ -155,9 +152,9 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             r.raise_for_status()
             job_id = r.json()["job_id"]
             logging.debug("job id %s", job_id)
-            record_linkerd_stat("start")
+              record_kiali_graph("start")
             time.sleep(HALF_RUN_SEC)
-            record_linkerd_stat("mid")
+              record_kiali_graph("mid")
             for _ in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
@@ -169,7 +166,7 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             else:
                 logging.warning("remote locust did not finish in time")
                 return
-            record_linkerd_stat("end")
+              record_kiali_graph("end")
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 resp = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if resp.status_code == 200:
@@ -189,11 +186,11 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
         "--html", out_dir / f"{scenario}.html",
     ]
     proc = subprocess.Popen(cmd)
-    record_linkerd_stat("start")
+    record_kiali_graph("start")
     time.sleep(HALF_RUN_SEC)
-    record_linkerd_stat("mid")
+    record_kiali_graph("mid")
     proc.wait()
-    record_linkerd_stat("end")
+    record_kiali_graph("end")
     if proc.returncode:
         logging.warning("Locust %s finished with exit-code %s", scenario, proc.returncode)
 
@@ -212,14 +209,14 @@ def summarise(run_tag: str, scenario_dirs: list[Path], namespace: str) -> pd.Dat
             logging.warning("No 'Total' row in %s", stat_csv)
             continue
         tot = total.iloc[0]
-        rps = get_linkerd_rps(namespace)
+        rps = get_kiali_rps(namespace)
         rows.append({
             "Run": run_tag,
             "Scenario": d.name,
             "Requests": tot.get("Request Count", 0),
             "Failures": tot.get("Failure Count", 0),
             "Avg RPS": tot.get("Requests/s", 0),
-            "Linkerd RPS": rps if rps is not None else "",
+            "Kiali RPS": rps if rps is not None else "",
             "P95 ms": tot.get("95%", 0),
         })
     return pd.DataFrame(rows)
