@@ -1,0 +1,8 @@
+meshConfig:
+  enableTracing: true
+  defaultConfig:
+    tracing:
+      sampling: 100.0         # 100% 採樣（測試用）
+      zipkin:
+        address: zipkin.istio-system.svc.cluster.local:9411
+

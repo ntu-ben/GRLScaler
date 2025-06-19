@@ -1,0 +1,20 @@
+# podmonitor-linkerd-proxy.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: linkerd-proxy
+  namespace: linkerd
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+    - key: linkerd.io/control-plane-ns
+      operator: Exists
+  podMetricsEndpoints:
+  - port: linkerd-admin
+    path: /metrics
+    interval: 15s
+

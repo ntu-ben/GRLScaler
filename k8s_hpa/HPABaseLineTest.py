@@ -39,8 +39,8 @@ HPA_ROOT      = REPO_ROOT / "macK8S" / "HPA" / "onlineboutique"
 LOCUST_ROOT   = REPO_ROOT / "loadtest" / "onlineboutique"
 TARGET_HOST   = "http://k8s.orb.local"
 HEALTH_PATH   = "/"
-HTTP_TIMEOUT  = 600   # wait up to 10 min for 200 OK
-COOLDOWN_SEC  = 60   # 1 min between scenarios
+HTTP_TIMEOUT  = 1200   # wait up to 20 min for 200 OK
+COOLDOWN_SEC  = 300   # 5 min between scenarios
 
 LOCUST_SCRIPTS = {
     "offpeak":      "locust_offpeak.py",
