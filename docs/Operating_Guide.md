@@ -1,20 +1,20 @@
 # Operations Guide
 
-This guide describes how to run the real data collector and train the autoscaler with a Kubernetes cluster using Linkerd and Prometheus.
+This guide describes how to run the real data collector and train the autoscaler with a Kubernetes cluster using Istio/Kiali and Prometheus.
 
 ## 1. Configure Endpoints
 
 Set the following environment variables or replace the CLI arguments accordingly:
 
 - `PROMETHEUS_URL` – base URL of your Prometheus server
-- `LINKERD_VIZ_API_URL` – Linkerd viz API endpoint (usually `http://localhost:8084`)
+- `KIALI_URL` – Kiali endpoint (usually `http://localhost:30326/kiali`)
 
 Ensure your cluster allows unauthenticated access to `/metrics` or provide the proper token.
 
 ## 2. Start the Data Collector
 
 ```bash
-python -m data_collector.linkerd_prom --edges-url $LINKERD_VIZ_API_URL/api/edges \
+python -m data_collector.kiali_prom --graph-url $KIALI_URL/api/namespaces/<ns>/graph \
     --metrics-url $PROMETHEUS_URL/api/v1/query
 ```
 

@@ -32,41 +32,32 @@ PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://localhost:9090/')
 # Endpoint of your Kube cluster: kube proxy enabled
 HOST = os.getenv('KUBE_HOST', 'http://localhost:8001')
 
-# Linkerd viz edges API base URL
-# metrics-api service usually runs at http://metrics-api.linkerd-viz.svc.cluster.local:8085
-# but can be overridden via the LINKERD_VIZ_API_URL env var
-LINKERD_VIZ_API_URL = os.getenv(
-    "LINKERD_VIZ_API_URL",
-    "http://metrics-api.linkerd-viz.svc.cluster.local:8085",
-)
+# Kiali graph API base URL
+KIALI_URL = os.getenv("KIALI_URL", "http://localhost:30326/kiali")
 
 
-def get_linkerd_service_graph(namespace=None):
-    """Query Linkerd edges and return node list and edge index."""
-    if namespace:
-        url = f"{LINKERD_VIZ_API_URL}/api/namespaces/{namespace}/edges"
-    else:
-        url = f"{LINKERD_VIZ_API_URL}/api/edges"
+def get_kiali_service_graph(namespace: str, graph_type: str = "workload"):
+    """Query Kiali graph and return node list and edge index."""
+    url = f"{KIALI_URL}/api/namespaces/{namespace}/graph?graphType={graph_type}"
     try:
         resp = requests.get(url, timeout=5)
         resp.raise_for_status()
     except Exception as e:
-        logging.error("Linkerd request failed: %s", e)
+        logging.error("Kiali request failed: %s", e)
         return [], []
-    data = resp.json().get("edges", [])
-    nodes = set()
-    edges = []
-    for dep in data:
-        parent = dep.get("src", {}).get("name")
-        child = dep.get("dst", {}).get("name")
-        if parent is None or child is None:
-            continue
-        nodes.add(parent)
-        nodes.add(child)
-        edges.append((parent, child))
-    node_list = list(nodes)
+    elements = resp.json().get("elements", {})
+    node_list = []
+    for node in elements.get("nodes", []):
+        name = node.get("data", {}).get("workload") or node.get("data", {}).get("app")
+        if name and name not in node_list:
+            node_list.append(name)
     index = {n: i for i, n in enumerate(node_list)}
-    edge_index = [(index[p], index[c]) for p, c in edges]
+    edge_index = []
+    for edge in elements.get("edges", []):
+        src = edge.get("data", {}).get("source")
+        dst = edge.get("data", {}).get("target")
+        if src in index and dst in index:
+            edge_index.append((index[src], index[dst]))
     return node_list, edge_index
 
 # Token for the Kubernetes cluster loaded from environment or .env file

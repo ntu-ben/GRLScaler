@@ -1,13 +1,13 @@
 # GNN + RL Autoscaler 架構設計
 
-以下內容說明如何將現有的 Linkerd + Prometheus + Kubernetes 單機開發環境
+以下內容說明如何將現有的 Istio/Kiali + Prometheus + Kubernetes 單機開發環境
 與 GNN-RL 文獻 (包含 Song et al. fjsp-drl) 結合，建構可落地的 Autoscaler。
 
 ## 1 資料→異質圖 (HeteroGraph) 流程
 
 | 步驟 | 來源 | 轉換 | 去向 |
 | --- | --- | --- | --- |
-| **① 服務呼叫** `edges` | Linkerd REST `/api/edges` | 建立 *svc→svc* 邊 (特徵: rps, p95, http_error) | ➜ **GNN** 邊特徵 |
+| **① 服務呼叫** `graph` | Kiali REST `/api/namespaces/{ns}/graph` | 建立 *svc→svc* 邊 (特徵: rps, p95, http_error) | ➜ **GNN** 邊特徵 |
 | **② 低階資源** | Prometheus `container_cpu_usage_seconds_total` 等 | 聚合至 *svc node* 特徵 μ_i = [cpu%, mem%, p95_latency, stateful_flag, RUE] | ➜ **GNN** 節點特徵 |
 | **③ 節點硬體** | K8s API (`/api/v1/nodes`) | 節點 ν_k =[avail_cpu, avail_mem, cpu_model_id] | ➜ **GNN** 節點特徵 |
 | **④ 全域指標** | Prometheus | cluster_avg_cpu, cluster_SLO_vio_rate | ➜ **RL 直接輸入** (tabular) |
@@ -110,7 +110,7 @@ $$
 
 | 項 | 週期 | 格式 |
 | --- | --- | --- |
-| Linkerd Edges | 30 s | JSON |
+| Kiali Graph | 30 s | JSON |
 | Prometheus Range Query | 30 s | CSV / Dict |
 | K8s Pod / Node | 30 s | JSON |
 | **同步聚合**：內存 `polars.DataFrame` → 轉 `HeteroData` |  |  |
@@ -138,4 +138,4 @@ $$
 
 ---
 
-此架構保留 Song et al. HGNN+PPO 一次挑選 (服務,節點) 的優點，並加入微服務專屬指標（Linkerd latency、replica lag、RUE），同時提供多種 GNN / RL 模型替換空間，適合逐步實作與評估。
+此架構保留 Song et al. HGNN+PPO 一次挑選 (服務,節點) 的優點，並加入微服務專屬指標（Istio latency、replica lag、RUE），同時提供多種 GNN / RL 模型替換空間，適合逐步實作與評估。

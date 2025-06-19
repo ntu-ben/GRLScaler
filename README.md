@@ -4,10 +4,9 @@
 
 ## 必要的 Kubernetes 設定
 
-1. 安裝 [Linkerd](https://linkerd.io/)。建議在 `values.yaml` 中設定
-   `proxy.defaultInboundPolicy: "cluster-unauthenticated"`，以便 Prometheus 能不經 mTLS 擷取 `/metrics`。
-2. 為 `onlineboutique` 命名空間加註 `linkerd.io/inject: enabled`，讓所有部署自動注入 Linkerd sidecar。
-3. 依需要安裝 Prometheus 與 Istio，相關 Helm `values` 皆收錄於 [`macK8S/`](macK8S/)。
+1. 安裝 Istio 與 [Kiali](https://kiali.io/)，確保 Prometheus 能存取 `/metrics`。
+2. 為 `onlineboutique` 命名空間啟用 sidecar injection，使服務可由 Istio 監控。
+3. 依需要安裝 Prometheus，其 Helm `values` 皆收錄於 [`macK8S/`](macK8S/)。
 
 ## 在一台或兩台主機上重現實驗
 
@@ -36,7 +35,7 @@ python rl_batch_loadtest.py --model grl --tag myrun
 | `M1_HOST` | 遠端 Locust agent 位址（選用） |
 | `PROMETHEUS_URL` | gnn_rl 查詢 Prometheus 用 |
 | `KUBE_HOST` | gnn_rl 連線至 Kubernetes proxy |
-| `LINKERD_VIZ_API_URL` | 取得 RPS 等指標 |
+| `KIALI_URL` | 取得服務拓撲 |
 | `LOCUST_RUN_TIME` | 每次 Locust 執行的持續時間 |
 | `NAMESPACE_REDIS`、`NAMESPACE_ONLINEBOUTIQUE` | 各範例對應的命名空間 |
 
@@ -46,7 +45,7 @@ python rl_batch_loadtest.py --model grl --tag myrun
 gnn_rl/        # 強化學習策略與訓練程式
 gnn_rl/envs/   # Gym 環境實作（原 gnn_rl_env）
 loadtest/      # Locust 測試腳本與遠端 agent
-macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等）
+macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
 ```
 
 ## 使用說明
@@ -59,10 +58,10 @@ macK8S/        # Kubernetes 設定檔（Linkerd、Istio、Prometheus、HPA 等�
    pip install -r requirements.txt
    ```
 
-2. 啟動資料收集器（需先設定 `PROMETHEUS_URL` 與 `LINKERD_VIZ_API_URL`）：
+2. 啟動資料收集器（需先設定 `PROMETHEUS_URL` 與 `KIALI_URL`）：
 
    ```bash
-   python -m data_collector.linkerd_prom --edges-url $LINKERD_VIZ_API_URL/api/edges \
+   python -m data_collector.kiali_prom --graph-url $KIALI_URL/api/namespaces/onlineboutique/graph \
        --metrics-url $PROMETHEUS_URL/api/v1/query
    ```
 
