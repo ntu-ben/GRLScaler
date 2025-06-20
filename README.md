@@ -75,7 +75,17 @@ macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
 3. 另開終端執行訓練（連線至 K8s 叢集請加上 `--k8s`）：
 
    ```bash
-   python scripts/train_gnnppo.py --use-case redis --model gat --steps 100000 --k8s
+   # Redis
+   python scripts/train_gnnppo.py \
+       --use-case redis \
+       --dataset-path datasets/real/redis/v1/redis_gym_observation.csv \
+       --model gat --steps 100000 --k8s
+
+   # Online Boutique
+   python scripts/train_gnnppo.py \
+       --use-case online_boutique \
+       --dataset-path datasets/real/onlineboutique/v1/online_boutique_gym_observation.csv \
+       --model gat --steps 100000 --k8s
    ```
 
 4. 訓練完成後可執行基準測試：
