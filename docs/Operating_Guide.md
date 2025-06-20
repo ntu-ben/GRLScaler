@@ -25,7 +25,7 @@ The collector prints JSON dictionaries to stdout. You can redirect them to a fil
 Run the training script with the desired GNN encoder. Add `--k8s` to interact with a live cluster:
 
 ```bash
-python scripts/train_gnnppo.py --model gat --steps 100000 --k8s
+python scripts/train_gnnppo.py --use-case redis --model gat --steps 100000 --k8s
 ```
 
 TensorBoard logs are written to `runs/gnnppo/`.
