@@ -25,11 +25,13 @@ class GNNPPOPolicy(BasePolicy):
         super().__init__(observation_space, action_space, lr_schedule, **kwargs)
         self.gnn_encoder = HeteroGraphEncoder(metadata, model=model, out_dim=embed_dim)
         flat_dim = observation_space.spaces["flat_feats"].shape[0]
-        hidden_dim = embed_dim + flat_dim
+        num_node_types = len(metadata[0])
+        hidden_dim = embed_dim * num_node_types + flat_dim
+        from gymnasium.spaces.utils import flatdim
         self.actor = nn.Sequential(
             nn.Linear(hidden_dim, 64),
             nn.Tanh(),
-            nn.Linear(64, self.action_space.flat_dim),
+            nn.Linear(64, flatdim(self.action_space)),
         )
         self.critic = nn.Sequential(
             nn.Linear(hidden_dim, 64),
@@ -40,6 +42,8 @@ class GNNPPOPolicy(BasePolicy):
     def _get_features(self, obs: Dict[str, torch.Tensor]) -> torch.Tensor:
         g_emb = self.gnn_encoder(obs["graph"])
         flat = torch.as_tensor(obs["flat_feats"], dtype=torch.float32, device=g_emb.device)
+        if flat.dim() == 1:
+            flat = flat.unsqueeze(0)
         return torch.cat([g_emb, flat], dim=-1)
 
     def forward(self, obs: Dict[str, torch.Tensor], deterministic: bool = False):

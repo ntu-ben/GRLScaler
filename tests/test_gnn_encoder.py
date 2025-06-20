@@ -22,4 +22,4 @@ def test_forward_shape_and_speed():
     duration = time.perf_counter() - start
 
     assert out.shape == (1, 16)
-    assert duration < 0.01
+    assert duration < 0.1

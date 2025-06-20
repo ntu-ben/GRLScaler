@@ -1,7 +1,7 @@
 from queue import Queue
 
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 
 from gnn_rl.common.feature_builder import RealtimeFeatureBuilder

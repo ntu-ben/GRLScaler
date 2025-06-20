@@ -2,6 +2,7 @@ import json
 from queue import Queue
 
 import pytest
+np = pytest.importorskip("numpy")
 
 gym = pytest.importorskip("gymnasium")
 
