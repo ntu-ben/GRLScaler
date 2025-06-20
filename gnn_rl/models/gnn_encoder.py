@@ -70,5 +70,13 @@ class HeteroGraphEncoder(nn.Module):
         h = self.encoder(data.x_dict, data.edge_index_dict)
         pooled = []
         for ntype in data.node_types:
-            pooled.append(h[ntype].mean(dim=0))
+            emb = h.get(ntype)
+            if emb is None:
+                emb = data[ntype].x
+            if emb.size(-1) < self.out_dim:
+                pad = emb.new_zeros(emb.size(0), self.out_dim - emb.size(-1))
+                emb = torch.cat([emb, pad], dim=-1)
+            elif emb.size(-1) > self.out_dim:
+                emb = emb[..., :self.out_dim]
+            pooled.append(emb.mean(dim=0))
         return torch.cat(pooled).unsqueeze(0)
