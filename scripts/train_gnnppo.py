@@ -20,7 +20,7 @@ def main():
         "--use-case",
         default="redis",
         choices=["redis", "online_boutique"],
-        help="Target environment"
+        help="Select training environment",
     )
     args = parser.parse_args()
 
@@ -33,7 +33,7 @@ def main():
         sample = sample[0]
 
     # Convert raw observation to DataFrames for HeteroData
-    node_feats = pd.DataFrame(sample["node_features"])  # service-level metrics
+    svc_df = pd.DataFrame(sample["node_features"])  # service-level metrics
     edge_index, edge_attr = dense_to_sparse(torch.tensor(sample["adjacency"]))
     edge_df = pd.DataFrame({
         "src": edge_index[0].numpy(),
@@ -42,10 +42,10 @@ def main():
     if edge_attr.numel() > 0:
         edge_df["weight"] = edge_attr.numpy()
 
-    # Node-level features currently unused
+    # Node (cluster-level) features are not provided
     node_df = pd.DataFrame()
 
-    metadata = build_hetero_data(node_feats, node_df, edge_df).metadata()
+    metadata = build_hetero_data(svc_df, node_df, edge_df).metadata()
 
     log_dir = f"runs/gnnppo/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
