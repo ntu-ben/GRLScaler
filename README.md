@@ -2,6 +2,8 @@
 
 本專案由 **國立台灣大學電機工程學研究所 NMLAB** 研究團隊維護，旨在研究於 Kubernetes 平台上使用強化學習進行自動擴縮。部分程式碼來自 [gym-hpa](https://github.com/jpedro1992/gym-hpa)，並在此基礎上加入圖神經網路與真實叢集測試工具。
 
+建議使用 **Python 3.10** 執行本專案。
+
 ## 必要的 Kubernetes 設定
 
 1. 安裝 Istio 與 [Kiali](https://kiali.io/)，確保 Prometheus 能存取 `/metrics`。
@@ -52,10 +54,14 @@ macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
 
 以下範例展示如何在本機快速啟用 GNN + RL 自動擴縮器。
 
-1. 安裝相依套件：
+1. 建議使用 **Python 3.10**，先安裝相依套件（已改用 `gymnasium`）：
 
    ```bash
    pip install -r requirements.txt
+   # 若已加入打包設定，亦可透過
+   # pip install -e .
+   # 安裝為可編輯模式，否則請手動設定
+   # export PYTHONPATH=$(pwd)
    ```
 
 2. 啟動資料收集器（需先設定 `PROMETHEUS_URL` 與 `KIALI_URL`）：
