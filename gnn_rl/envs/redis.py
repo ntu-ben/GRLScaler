@@ -67,7 +67,7 @@ class Redis(gym.Env):
     """Horizontal Scaling for Redis in Kubernetes - an OpenAI gym environment"""
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3, use_graph=False):
+    def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3, use_graph=False, dataset_path=None):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -147,7 +147,8 @@ class Redis(gym.Env):
         self.episode_count = 0
         self.file_results = "results.csv"
         self.obs_csv = self.name + "_observation.csv"
-        if not self.k8s:
+
+        if dataset_path is None:
             dataset_path = (
                 Path(__file__).resolve().parents[2]
                 / "datasets"
@@ -156,6 +157,9 @@ class Redis(gym.Env):
                 / "v1"
                 / f"{self.name}_observation.csv"
             )
+
+        if not self.k8s:
+            print(f"[INFO] Loading dataset from: {dataset_path}")
             self.df = pd.read_csv(dataset_path)
         else:
             self.df = pd.DataFrame()

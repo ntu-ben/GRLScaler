@@ -80,7 +80,7 @@ class OnlineBoutique(gym.Env):
 
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3, use_graph=False):
+    def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3, use_graph=False, dataset_path=None):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -166,17 +166,22 @@ class OnlineBoutique(gym.Env):
         self.obs_csv = self.name + "_observation.csv"
         import os
 
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-        dataset_path = os.path.join(
-            base_dir,
-            "datasets",
-            "real",
-            self.deploymentList[0].namespace,
-            "v1",
-            "online_boutique_gym_observation.csv",
-        )
-        print(f"[INFO] Loading dataset from: {dataset_path}")
-        self.df = pd.read_csv(dataset_path)
+        if dataset_path is None:
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+            dataset_path = os.path.join(
+                base_dir,
+                "datasets",
+                "real",
+                self.deploymentList[0].namespace,
+                "v1",
+                "online_boutique_gym_observation.csv",
+            )
+
+        if not self.k8s:
+            print(f"[INFO] Loading dataset from: {dataset_path}")
+            self.df = pd.read_csv(dataset_path)
+        else:
+            self.df = pd.DataFrame()
 
 
     def _fetch_service_graph(self):
