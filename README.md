@@ -52,9 +52,10 @@ macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
 
 以下範例展示如何在本機快速啟用 GNN + RL 自動擴縮器。
 
-1. 安裝相依套件：
+1. 安裝相依套件並以可編輯模式安裝此專案：
 
    ```bash
+   pip install -e .
    pip install -r requirements.txt
    ```
 

@@ -1,6 +1,6 @@
 """Custom gym environments used by the GNN-based RL agent."""
 
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
 # Re-export environments from the consolidated ``gnn_rl.envs`` package so
 # existing entry points remain valid.

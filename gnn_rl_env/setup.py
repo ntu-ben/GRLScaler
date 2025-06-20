@@ -6,3 +6,4 @@ setup(name='gnn_rl_env',
       author_email='josepedro.pereiradossantos@ugent.be',
       install_requires=['gym', 'numpy', 'keras']  # Add dependencies
 )
+
