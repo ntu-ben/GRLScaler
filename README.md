@@ -57,6 +57,7 @@ macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
 1. 建議使用 **Python 3.10**，先安裝相依套件（已改用 `gymnasium`）：
 
    ```bash
+   pip install -e .
    pip install -r requirements.txt
    # 若已加入打包設定，亦可透過
    # pip install -e .

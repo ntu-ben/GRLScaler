@@ -20,6 +20,12 @@ def build_hetero_data(svc_df, node_df, edge_df):
     node = _to_numpy(node_df).astype(np.float32)
     edges = _to_numpy(edge_df)
 
+    if edges.size > 0:
+        max_idx = int(max(edges[:, 0].max(), edges[:, 1].max()))
+        if svc.shape[0] <= max_idx:
+            pad = np.zeros((max_idx + 1 - svc.shape[0], svc.shape[1]), dtype=svc.dtype)
+            svc = np.vstack([svc, pad])
+
     data = HeteroData()
     data["svc"].x = torch.tensor(svc, dtype=torch.float32)
     data["node"].x = torch.tensor(node, dtype=torch.float32)
