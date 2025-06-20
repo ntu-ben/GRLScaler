@@ -15,9 +15,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="gat", choices=["gat", "gcn", "dysat"], help="GNN encoder type")
     parser.add_argument("--steps", type=int, default=1_000_00, help="Training steps")
+    parser.add_argument("--k8s", action="store_true", help="Interact with a live Kubernetes cluster")
     args = parser.parse_args()
 
-    env = Redis(use_graph=True)
+    env = Redis(k8s=args.k8s, use_graph=True)
     sample = env.reset()
 
     # Convert raw observation to DataFrames for HeteroData

@@ -7,6 +7,7 @@ from statistics import mean
 import gymnasium as gym
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from gymnasium import spaces
 from gymnasium.utils import seeding
 from datetime import datetime
@@ -146,8 +147,18 @@ class Redis(gym.Env):
         self.episode_count = 0
         self.file_results = "results.csv"
         self.obs_csv = self.name + "_observation.csv"
-        self.df = pd.read_csv("../../datasets/real/" + self.deploymentList[0].namespace + "/v1/"
-                              + self.name + '_' + 'observation.csv')
+        if not self.k8s:
+            dataset_path = (
+                Path(__file__).resolve().parents[2]
+                / "datasets"
+                / "real"
+                / self.deploymentList[0].namespace
+                / "v1"
+                / f"{self.name}_observation.csv"
+            )
+            self.df = pd.read_csv(dataset_path)
+        else:
+            self.df = pd.DataFrame()
 
     def _fetch_service_graph(self):
         nodes, edges = get_kiali_service_graph(namespace="redis")
