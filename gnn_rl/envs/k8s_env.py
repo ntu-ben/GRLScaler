@@ -1,4 +1,5 @@
 from queue import Queue
+from typing import Optional
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -10,7 +11,7 @@ from gnn_rl.common.feature_builder import RealtimeFeatureBuilder
 class K8sEnv(gym.Env):
     """Minimal env that pulls observations from RealtimeFeatureBuilder."""
 
-    def __init__(self, queue: Queue | None = None):
+    def __init__(self, queue: Optional[Queue] = None):
         super().__init__()
         self.queue = queue or Queue()
         self.builder = RealtimeFeatureBuilder(self.queue)
