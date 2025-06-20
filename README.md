@@ -72,10 +72,10 @@ macK8S/        # Kubernetes 設定檔（Istio、Kiali、Prometheus、HPA 等）
        --metrics-url $PROMETHEUS_URL/api/v1/query
    ```
 
-3. 另開終端執行訓練：
+3. 另開終端執行訓練（連線至 K8s 叢集請加上 `--k8s`）：
 
    ```bash
-   python scripts/train_gnnppo.py --model gat --steps 100000
+   python scripts/train_gnnppo.py --model gat --steps 100000 --k8s
    ```
 
 4. 訓練完成後可執行基準測試：
