@@ -6,6 +6,16 @@ from torch import nn
 from gymnasium import spaces
 from stable_baselines3.common.policies import BasePolicy
 
+# Keys accepted by BasePolicy/BaseModel that we want to forward
+_BASE_KWARGS = {
+    "features_extractor_class",
+    "features_extractor_kwargs",
+    "features_extractor",
+    "normalize_images",
+    "optimizer_class",
+    "optimizer_kwargs",
+}
+
 from gnn_rl.models.gnn_encoder import HeteroGraphEncoder
 
 
@@ -22,7 +32,9 @@ class GNNPPOPolicy(BasePolicy):
         embed_dim: int = 32,
         **kwargs,
     ):
-        super().__init__(observation_space, action_space, lr_schedule, **kwargs)
+        # Filter kwargs to only keep arguments accepted by BasePolicy
+        base_kwargs = {k: kwargs.pop(k) for k in list(kwargs.keys()) if k in _BASE_KWARGS}
+        super().__init__(observation_space, action_space, lr_schedule, **base_kwargs)
         self.gnn_encoder = HeteroGraphEncoder(metadata, model=model, out_dim=embed_dim)
         flat_dim = observation_space.spaces["flat_feats"].shape[0]
         num_node_types = len(metadata[0])
