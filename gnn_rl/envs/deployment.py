@@ -7,16 +7,20 @@ from pathlib import Path
 import requests
 from kubernetes import client
 
-# Load environment variables from a .env file located at the repo root, if present
+# Load environment variables from a .env file located at the repo root.
 ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-if ENV_PATH.exists():
-    with open(ENV_PATH) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k, v)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ENV_PATH)
+except Exception:  # pragma: no cover - optional dependency
+    if ENV_PATH.exists():
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k, v)
 
 # Constants
 MAX_CPU = 10000  # cpu in m

@@ -1,5 +1,7 @@
 import argparse
 from datetime import datetime
+import os
+from pathlib import Path
 
 import pandas as pd
 from stable_baselines3 import PPO
@@ -9,6 +11,21 @@ from torch_geometric.utils import dense_to_sparse
 from gnn_rl.envs import Redis, OnlineBoutique
 from gnn_rl.agents.ppo_gnn import GNNPPOPolicy
 from gnn_rl.common.feature_builder import build_hetero_data
+
+# Load environment variables so URLs/K8s settings come from `.env`
+ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ENV_PATH)
+except Exception:  # pragma: no cover - optional dependency
+    if ENV_PATH.exists():
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                os.environ.setdefault(k, v)
 
 
 def main():
