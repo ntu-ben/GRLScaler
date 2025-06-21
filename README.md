@@ -29,7 +29,8 @@ python rl_batch_loadtest.py --model grl --tag myrun
 
 ### 主要環境變數
 
-所有腳本可從 `.env` 讀取設定，下表列出常用變數：
+在專案根目錄建立 `.env` 檔，內容可參考 `\.envTemplate`。所有腳本會從
+`.env` 讀取設定，下表列出常用變數：
 
 | 變數 | 用途 |
 |------|------|

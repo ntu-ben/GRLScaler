@@ -2,8 +2,25 @@ import logging
 import math
 import random
 import time
+import os
+from pathlib import Path
 import requests
 from kubernetes import client
+
+# Load .env from repo root for configurable URLs
+ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ENV_PATH)
+except Exception:  # pragma: no cover
+    if ENV_PATH.exists():
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k, v)
 
 # Constants
 MAX_CPU = 10000  # cpu in m
@@ -14,13 +31,13 @@ CPU_WEIGHT = 0.7
 MEM_WEIGHT = 0.3
 
 # port-forward in k8s cluster
-PROMETHEUS_URL = 'http://localhost:9090/'
+PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://localhost:9090/')
 
 # Endpoint of your Kube cluster: kube proxy enabled
-HOST = "http://localhost:8080"
+HOST = os.getenv('KUBE_HOST', 'http://localhost:8080')
 
-# TODO: Add the TOKEN from your cluster!
-TOKEN = ""
+# Token for the Kubernetes cluster
+TOKEN = os.getenv('K8S_TOKEN', '')
 
 
 def get_redis_deployment_list(k8s, min, max):
