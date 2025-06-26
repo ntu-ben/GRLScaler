@@ -40,12 +40,48 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 import numpy as np
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback
+from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, BaseCallback
 
 from gnnrl.core.envs import OnlineBoutique
 from stable_baselines3.common.policies import ActorCriticPolicy
+
+class DetailedLoggingCallback(BaseCallback):
+    """Custom callback for detailed training logging"""
+    
+    def __init__(self, verbose=0):
+        super(DetailedLoggingCallback, self).__init__(verbose)
+        self.episode_rewards = []
+        self.episode_lengths = []
+        
+    def _on_step(self) -> bool:
+        # Log every 100 steps with detailed metrics
+        if self.n_calls % 100 == 0:
+            # Get current environment info
+            infos = self.locals.get('infos', [{}])
+            env = self.training_env.envs[0] if hasattr(self.training_env, 'envs') else self.training_env
+            
+            # Extract metrics from environment
+            if hasattr(env, 'deploymentList') and env.deploymentList:
+                total_pods = sum(d.num_pods for d in env.deploymentList)
+                avg_latency = getattr(env.deploymentList[9], 'latency', 0) if len(env.deploymentList) > 9 else 0
+                total_replicas = sum(d.desired_replicas for d in env.deploymentList)
+            else:
+                total_pods = avg_latency = total_replicas = 0
+            
+            # Log detailed training metrics
+            logger.info(f"Step {self.n_calls}: "
+                       f"Total_Pods={total_pods}, "
+                       f"Avg_Latency={avg_latency:.2f}, "
+                       f"Total_Replicas={total_replicas}, "
+                       f"Episode_Reward={self.locals.get('rewards', [0])[-1] if 'rewards' in self.locals else 0}")
+        
+        return True
+    
+    def _on_rollout_end(self) -> None:
+        """Called at the end of each rollout"""
+        logger.info(f"Rollout end at step {self.n_calls} - collecting experiences for policy update")
 
 # Setup logging
 logging.basicConfig(
@@ -159,6 +195,16 @@ def parse_args():
     )
     
     parser.add_argument(
+        '--alg', choices=['ppo', 'a2c'], default='ppo',
+        help='RL Algorithm (default: ppo)'
+    )
+    
+    parser.add_argument(
+        '--env-step-interval', type=float, default=15.0,
+        help='Environment step interval in seconds (default: 15.0)'
+    )
+    
+    parser.add_argument(
         '--dataset-path', type=str,
         default='gnnrl/data/datasets/real/onlineboutique/v1/online_boutique_gym_observation.csv',
         help='Dataset path for simulation mode'
@@ -206,7 +252,7 @@ def create_environment(args):
             goal_reward=args.goal,
             use_graph=True,  # Enable GNN mode
             dataset_path=args.dataset_path if not args.k8s else None,
-            waiting_period=0.5 if args.k8s else 0.1
+            waiting_period=args.env_step_interval
         )
         
         logger.info("✓ Environment created successfully")
@@ -234,33 +280,52 @@ def create_model(env, args):
             [('svc', 'calls', 'svc')]  # edge types - only service-to-service calls
         )
         
-        # Setup tensorboard logging - use same format as gym_hpa
+        # Setup tensorboard logging - use absolute path
         scenario = 'real' if args.k8s else 'simulated'
         tensorboard_log = None
         if not args.no_tensorboard:
-            tensorboard_log = f"../../results/online_boutique/{scenario}/{args.goal}/"
+            # 使用絕對路徑，基於專案根目錄
+            results_dir = Path(__file__).parent.parent.parent / "results" / "online_boutique" / scenario / args.goal
+            results_dir.mkdir(parents=True, exist_ok=True)
+            tensorboard_log = str(results_dir)
             logger.info(f"Tensorboard logging enabled: {tensorboard_log}")
         else:
             logger.info("Tensorboard logging disabled")
         
-        # Create PPO model with MultiInput policy for Dict observation space
-        model = PPO(
-            policy="MultiInputPolicy",
-            env=env,
-            learning_rate=3e-4,
-            n_steps=256,
-            batch_size=64,
-            n_epochs=10,
-            gamma=0.99,
-            gae_lambda=0.95,
-            clip_range=0.2,
-            ent_coef=0.01,
-            vf_coef=0.5,
-            max_grad_norm=0.5,
-            verbose=1,
-            tensorboard_log=tensorboard_log,
-            policy_kwargs={}
-        )
+        # Create RL model with MultiInput policy for Dict observation space
+        if args.alg == 'a2c':
+            model = A2C(
+                policy="MultiInputPolicy",
+                env=env,
+                learning_rate=3e-4,
+                n_steps=5,
+                gamma=0.99,
+                gae_lambda=1.0,
+                ent_coef=0.01,
+                vf_coef=0.25,
+                max_grad_norm=0.5,
+                verbose=1,
+                tensorboard_log=tensorboard_log,
+                policy_kwargs={}
+            )
+        else:  # default to PPO
+            model = PPO(
+                policy="MultiInputPolicy",
+                env=env,
+                learning_rate=3e-4,
+                n_steps=256,
+                batch_size=64,
+                n_epochs=10,
+                gamma=0.99,
+                gae_lambda=0.95,
+                clip_range=0.2,
+                ent_coef=0.01,
+                vf_coef=0.5,
+                max_grad_norm=0.5,
+                verbose=1,
+                tensorboard_log=tensorboard_log,
+                policy_kwargs={}
+            )
         
         logger.info("✓ GNNRL model created successfully")
         return model
@@ -274,6 +339,7 @@ def run_experiment(args):
     logger.info("="*60)
     logger.info("🚀 Starting GNNRL Experiment")
     logger.info("="*60)
+    logger.info(f"Algorithm: {args.alg.upper()}")
     logger.info(f"Mode: {'Live K8s Cluster' if args.k8s else 'Simulation'}")
     logger.info(f"Model: {args.model.upper()}")
     logger.info(f"Goal: {args.goal}")
@@ -305,6 +371,10 @@ def run_experiment(args):
     # Setup callbacks
     callbacks = []
     
+    # Detailed logging callback
+    detailed_logging = DetailedLoggingCallback(verbose=1)
+    callbacks.append(detailed_logging)
+    
     # Checkpoint callback
     checkpoint_callback = CheckpointCallback(
         save_freq=args.save_freq,
@@ -322,7 +392,7 @@ def run_experiment(args):
     try:
         # Create tensorboard log name - follow gym_hpa naming convention with gnn suffix
         env_name = "online_boutique_gym"
-        tb_log_name = f"ppo_gnn_env_{env_name}_goal_{args.goal}_k8s_{args.k8s}_totalSteps_{args.steps}"
+        tb_log_name = f"{args.alg}_{args.model}_env_{env_name}_goal_{args.goal}_k8s_{args.k8s}_totalSteps_{args.steps}"
         
         model.learn(
             total_timesteps=args.steps,

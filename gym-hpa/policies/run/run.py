@@ -98,7 +98,11 @@ def main():
     else:
         scenario = 'simulated'
 
-    tensorboard_log = "../../results/" + use_case + "/" + scenario + "/" + goal + "/"
+    # 使用絕對路徑，基於專案根目錄
+    from pathlib import Path
+    results_dir = Path(__file__).parent.parent.parent.parent / "results" / use_case / scenario / goal
+    results_dir.mkdir(parents=True, exist_ok=True)
+    tensorboard_log = str(results_dir) + "/"
 
     name = alg + "_env_" + env.name + "_goal_" + goal + "_k8s_" + str(k8s) + "_totalSteps_" + str(total_steps)
 

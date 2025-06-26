@@ -32,22 +32,21 @@ NAMESPACE     = NAMESPACE_OB
 REPO_ROOT     = Path(__file__).resolve().parents[1]
 # Online Boutique 原始碼路徑，可依需要調整
 MICRO_DEMO    = REPO_ROOT / "MicroServiceBenchmark" / "microservices-demo"
-MANIFEST_YAML = MICRO_DEMO / "release" / "kubernetes-manifests.yaml"
+MANIFEST_YAML = MICRO_DEMO / "release" / "kubernetes-manifests-withoutLoadgenerator.yaml"
 # HPA YAML 目錄移至 repo/macK8S/HPA/onlineboutique
 HPA_ROOT      = REPO_ROOT / "macK8S" / "HPA" / "onlineboutique"
 # Scenario scripts are shared with rl_batch_loadtest under loadtest/onlineboutique
 LOCUST_ROOT   = REPO_ROOT / "loadtest" / "onlineboutique"
-TARGET_HOST   = "http://k8s.orb.local"
-HEALTH_PATH   = "/"
-HTTP_TIMEOUT  = 1200   # wait up to 20 min for 200 OK
-COOLDOWN_SEC  = 300   # 5 min between scenarios
+TARGET_HOST   = os.getenv("TARGET_HOST", "http://k8s.orb.local")
+HEALTH_PATH   = os.getenv("HEALTH_PATH", "/")
+HTTP_TIMEOUT  = int(os.getenv("HTTP_TIMEOUT", "1200"))   # wait up to 20 min for 200 OK
+COOLDOWN_SEC  = int(os.getenv("COOLDOWN_BETWEEN_SCENARIOS", "300"))   # 5 min between scenarios
 
 LOCUST_SCRIPTS = {
     "offpeak":      "locust_offpeak.py",
     "rushsale":     "locust_rushsale.py",
     "peak":         "locust_peak.py",
     "fluctuating":  "locust_fluctuating.py",
-    "cyclic":       "locust_cyclic.py",
 }
 RUN_TIME = os.getenv("LOCUST_RUN_TIME", "15m")
 _MULT = {"s": 1, "m": 60, "h": 3600}

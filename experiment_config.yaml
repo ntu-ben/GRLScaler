@@ -1,0 +1,139 @@
+# GRLScaler 統一實驗配置
+# ==============================================
+
+# 實驗基本設定
+experiments:
+  gym_hpa:
+    name: "基礎強化學習 (Gym-HPA)"
+    description: "使用 MLP 策略的標準強化學習自動擴展"
+    script_path: "gym-hpa/policies/run/run.py"
+    default_args:
+      alg: "ppo"
+      use_case: "online_boutique"
+      goal: "latency"
+      k8s: true
+      training: true
+      steps: 500
+      total_steps: 5000
+    supports_distributed_testing: true
+    
+  k8s_hpa:
+    name: "Kubernetes HPA 基準測試"
+    description: "原生 Kubernetes HPA 基準性能測試"
+    script_path: "k8s_hpa/HPABaseLineTest.py"
+    default_args: {}
+    supports_distributed_testing: true
+    baseline: true
+    
+  gnnrl:
+    name: "圖神經網路強化學習 (GNNRL)"
+    description: "基於服務圖拓撲的 GNN-RL 自動擴展"
+    script_path: "gnnrl/training/run_gnnrl_experiment.py"
+    default_args:
+      k8s: true
+      steps: 5000
+      model: "gat"
+      goal: "latency"
+      embed_dim: 32
+    supports_distributed_testing: true
+    advanced: true
+
+# Locust 測試配置
+loadtest:
+  scenarios:
+    offpeak:
+      script: "locust_offpeak.py"
+      description: "低流量基準測試"
+      duration: "15m"
+      expected_rps: 50
+      
+    rushsale:
+      script: "locust_rushsale.py"
+      description: "搶購高流量衝擊測試"
+      duration: "15m"
+      expected_rps: 500
+      
+    peak:
+      script: "locust_peak.py"
+      description: "高峰流量持續測試"
+      duration: "15m"
+      expected_rps: 300
+      
+    fluctuating:
+      script: "locust_fluctuating.py"
+      description: "波動流量模式測試"
+      duration: "15m"
+      expected_rps: "150-400"
+  
+  # 分散式測試配置
+  distributed:
+    enabled: true
+    master_host_env: "M1_HOST"
+    fallback_to_local: true
+    timeout_checks: 720
+    cooldown_between_scenarios: 60
+    
+  # 監控整合
+  monitoring:
+    kiali:
+      enabled: true
+      url_env: "KIALI_URL"
+      graph_snapshots: ["start", "mid", "end"]
+    
+    prometheus:
+      enabled: true
+      url_env: "PROMETHEUS_URL"
+      
+    linkerd:
+      enabled: false
+      stats_collection: true
+
+# 環境配置
+environment:
+  namespaces:
+    onlineboutique: "onlineboutique"
+    redis: "redis"
+    istio_system: "istio-system"
+    
+  endpoints:
+    target_host: "http://k8s.orb.local"
+    health_path: "/"
+    kube_api: "http://localhost:8001"
+    
+  timeouts:
+    http_health_check: 1200  # 20 minutes
+    training_max: 7200       # 2 hours
+    
+# 結果處理
+results:
+  log_structure: "logs/{model}/{run_tag}/"
+  formats:
+    - csv
+    - html
+    - json
+  
+  aggregation:
+    summary_file: "summary.csv"
+    dashboard_file: "aggregate.html"
+    master_summary: "master_summary.csv"
+    
+  metrics:
+    - requests_total
+    - failures_total
+    - avg_rps
+    - p95_latency
+    - kiali_rps
+    - training_time
+    - convergence_rate
+
+# 實驗執行策略
+execution:
+  parallel_scenarios: false
+  experiment_isolation: true
+  auto_cleanup: true
+  checkpoint_frequency: 1000
+  
+  validation:
+    k8s_environment: true
+    service_health: true
+    resource_availability: true

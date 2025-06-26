@@ -89,5 +89,13 @@ class HeteroGraphEncoder(nn.Module):
                 emb = torch.cat([emb, pad], dim=-1)
             elif emb.size(-1) > self.out_dim:
                 emb = emb[..., :self.out_dim]
+            
+            # Debug print for service embeddings
+            if ntype == 'svc':
+                print(f"DEBUG: svc_embeds.shape = {emb.shape}")
+            
             pooled.append(emb.mean(dim=0))
-        return torch.cat(pooled).unsqueeze(0)
+        
+        final_embedding = torch.cat(pooled).unsqueeze(0)
+        print(f"DEBUG: final graph embedding shape = {final_embedding.shape}")
+        return final_embedding

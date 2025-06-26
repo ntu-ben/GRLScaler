@@ -74,7 +74,7 @@ def main():
     model = PPO(GNNPPOPolicy, env, policy_kwargs=policy_kwargs, tensorboard_log=log_dir)
     
     # Create tb_log_name following gym_hpa convention with gnn suffix
-    tb_log_name = f"ppo_gnn_env_{env.name}_goal_{goal}_k8s_{args.k8s}_totalSteps_{args.steps}_run"
+    tb_log_name = f"ppo_{args.model}_env_{env.name}_goal_{goal}_k8s_{args.k8s}_totalSteps_{args.steps}_run"
     model.learn(args.steps, tb_log_name=tb_log_name)
 
 

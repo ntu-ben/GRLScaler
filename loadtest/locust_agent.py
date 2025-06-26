@@ -17,12 +17,19 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
-LOCUST_BIN  = shutil.which("locust") or "/usr/local/bin/locust"
+# 讀取環境變數
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+LOCUST_BIN  = shutil.which("locust") or os.getenv("LOCUST_BIN", "/usr/local/bin/locust")
 # Scenario scripts live directly under the "onlineboutique" folder. The previous
 # path used an extra "stressTest" level that does not exist and caused file
 # lookup failures.
 SCENARIO_DIR = Path(__file__).parent / "onlineboutique"
-LOG_ROOT    = Path("remote_logs")      # 儲存在 m1，再由 m4 抓取
+LOG_ROOT    = Path(os.getenv("LOCUST_AGENT_LOG_ROOT", "remote_logs"))      # 儲存在 m1，再由 m4 抓取
 
 class JobReq(BaseModel):
     tag: str                   # e.g. iter01_offpeak
@@ -31,6 +38,14 @@ class JobReq(BaseModel):
     run_time: str = "15m"
 
 jobs = {}   # job_id -> {"path":…, "ret":returncode}
+
+@app.get("/")
+def root():
+    return {"status": "Locust Agent is running", "endpoints": ["/start", "/status/{job_id}", "/download/{tag}/{filename}"]}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 def _parse_timespan(spec: str) -> int:
     """Return `spec` in seconds. Supports <num>[smhd] groups."""

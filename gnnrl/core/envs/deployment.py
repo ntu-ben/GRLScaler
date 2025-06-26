@@ -104,9 +104,9 @@ TOKEN = os.getenv("K8S_TOKEN")
 
 def get_redis_deployment_list(k8s, min, max):
     deployment_list = [
-        DeploymentStatus(k8s, "redis-leader", "redis", "leader", "docker.io/redis:6.0.5",
+        DeploymentStatus(k8s, "redis-master", "redis", "leader", "docker.io/redis:6.0.5",
                          max, min, 250, 500, 250, 500),
-        DeploymentStatus(k8s, "redis-follower", "redis", "follower",
+        DeploymentStatus(k8s, "redis-slave", "redis", "follower",
                          "gcr.io/google_samples/gb-redis-follower:v2",
                          max, min, 250, 500, 250, 500)]
     return deployment_list
@@ -396,7 +396,7 @@ class DeploymentStatus:  # Deployment Status (Workload)
                 trans = int(trans / 1000)  # saved as KBit/s
                 self.transmit_traffic += trans
 
-            if self.name == 'redis-leader':
+            if self.name == 'redis-master':
                 query_duration = 'sum(irate(redis_commands_duration_seconds_total[1m]))'
                 query_processed = 'sum(irate(redis_commands_processed_total[1m]))'
                 redis_duration = 0

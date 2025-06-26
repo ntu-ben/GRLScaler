@@ -40,7 +40,7 @@ ACTION_TERMINATE_6_REPLICA = 13
 ACTION_TERMINATE_7_REPLICA = 14
 
 # Deployments
-DEPLOYMENTS = ["redis-leader", "redis-follower"]
+DEPLOYMENTS = ["redis-master", "redis-slave"]
 
 # Action Moves
 MOVES = ["None", "Add-1", "Add-2", "Add-3", "Add-4", "Add-5", "Add-6", "Add-7",

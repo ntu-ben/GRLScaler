@@ -98,6 +98,11 @@ class OnlineBoutique(gym.Env):
 
         # Current Step
         self.current_step = 0
+        
+        # Action history tracking for diagnostics
+        self.action_history = []
+        self.action_log_file = None
+        self._init_action_logging()
 
         # Actions identified by integers 0-n -> 15 actions!
         self.num_actions = 15
@@ -241,8 +246,14 @@ class OnlineBoutique(gym.Env):
         else:  # ==10 email
             n = ID_email
 
+        # Record old replicas for logging
+        old_replicas = self.deploymentList[n].desired_replicas
+        
         # Execute one time step within the environment
         self.take_action(action[ID_MOVES], n)
+        
+        # Record new replicas for logging
+        new_replicas = self.deploymentList[n].desired_replicas
 
         # Wait a few seconds if on real k8s cluster
         if self.k8s:
@@ -263,6 +274,12 @@ class OnlineBoutique(gym.Env):
         # Get reward
         reward = self.get_reward
         self.total_reward += reward
+
+        # Log action for diagnostics
+        deployment_name = DEPLOYMENTS[n] if n < len(DEPLOYMENTS) else f"deployment_{n}"
+        obs_for_logging = self.get_state()
+        self._log_action(self.current_step, action, n, deployment_name, 
+                        old_replicas, new_replicas, reward, obs_for_logging)
 
         self.avg_pods.append(get_num_pods(self.deploymentList))
         self.avg_latency.append(self.deploymentList[0].latency)
@@ -303,6 +320,52 @@ class OnlineBoutique(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+    
+    def _init_action_logging(self):
+        """Initialize CSV logging for action history"""
+        # Create logs directory if it doesn't exist
+        log_dir = os.getenv('LOG_ROOT', 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        
+        # Create action history CSV file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_filename = f"action_history_{timestamp}.csv"
+        self.action_log_file = os.path.join(log_dir, csv_filename)
+        
+        # Write CSV header
+        with open(self.action_log_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'step', 'timestamp', 'deployment_id', 'deployment_name', 
+                'action_type', 'action_value', 'old_replicas', 'new_replicas',
+                'reward', 'avg_latency', 'total_pods', 'cpu_usage', 'mem_usage'
+            ])
+        
+        logging.info(f"Action history logging initialized: {self.action_log_file}")
+    
+    def _log_action(self, step, action, deployment_id, deployment_name, 
+                   old_replicas, new_replicas, reward, obs):
+        """Log action details to CSV file"""
+        if self.action_log_file is None:
+            return
+            
+        # Extract observation metrics for logging
+        avg_latency = getattr(self.deploymentList[9], 'latency', 0) if len(self.deploymentList) > 9 else 0
+        total_pods = sum(d.num_pods for d in self.deploymentList)
+        avg_cpu = mean([d.cpu_usage for d in self.deploymentList]) if self.deploymentList else 0
+        avg_mem = mean([d.mem_usage for d in self.deploymentList]) if self.deploymentList else 0
+        
+        # Write to CSV
+        try:
+            with open(self.action_log_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    step, datetime.now().isoformat(), deployment_id, deployment_name,
+                    action[1], action[1], old_replicas, new_replicas,
+                    reward, avg_latency, total_pods, avg_cpu, avg_mem
+                ])
+        except Exception as e:
+            logging.warning(f"Failed to log action: {e}")
 
     def reset(self, *, seed=None, options=None):
         """

@@ -1,16 +1,29 @@
 #!/usr/bin/env python3
 """
-rl_batch_loadtest.py  v4.2  (2025-06-06)
+rl_batch_loadtest.py  v5.0  (2025-06-23)
 ────────────────────────────────────────────────────────────────────────────
-功能摘要
-• --model {gym,gym-hpa,grl,gwydion,hpa} 決定 repo 路徑；grl 自動加 --gnn_mode
-• 讀取 .env → M1_HOST=http://<m1-ip>:8099 ；遠端 locust 連不上才 fallback 本機
-• 清洗 argv 中意外的 "\" / "\n" token
-• 建立 logs/<run-tag>/batch.log，任何例外都同步寫 console + log
+統一實驗管理器 - 支持分散式 Locust 測試環境
+────────────────────────────────────────────────────────────────────────────
+功能摘要：
+• 支持三種實驗模式：gym_hpa, k8s_hpa (baseline), gnnrl
+• 整合分散式 Locust 測試環境 (M1_HOST 遠端代理)
+• 自動協調實驗訓練與負載測試的時序
+• 統一日誌管理和結果匯總
+• 支持多種負載測試情境：offpeak, rushsale, peak, fluctuating
+
+實驗架構：
+• gym_hpa: 基礎強化學習 + MLP 策略
+• k8s_hpa: Kubernetes HPA 基準測試
+• gnnrl: 圖神經網路強化學習
+
+分散式測試：
+• 遠端 Locust 代理 (M1_HOST) 用於分散負載
+• 本地 fallback 機制
+• 同步訓練過程與負載測試
 """
 
 from __future__ import annotations
-import os, sys, logging, subprocess, time, datetime as dt, traceback, argparse
+import os, sys, logging, subprocess, time, datetime as dt, traceback, argparse, random
 from pathlib import Path
 from typing import List, Dict
 
@@ -31,7 +44,7 @@ except ModuleNotFoundError:
 # ──────────────────────────────────────────────────────────────────────────
 # 1. 全域常數（與舊版相同；節錄必要項）
 # --------------------------------------------------------------------------
-LOG_ROOT = Path("logs")
+LOG_ROOT = Path(os.getenv("LOG_ROOT", "logs"))
 MODEL_ROOT: Dict[str, Path] = {
     # default to paths relative to this script so the repo can be cloned
     # anywhere without manual edits
@@ -49,22 +62,21 @@ NAMESPACE_OB  = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
 NAMESPACE_REDIS = os.getenv("NAMESPACE_REDIS", "redis")
 NAMESPACE     = NAMESPACE_OB
 TARGET_HOST   = os.getenv("TARGET_HOST", "http://k8s.orb.local")
-HEALTH_PATH   = "/"
-HTTP_TIMEOUT  = 600
+HEALTH_PATH   = os.getenv("HEALTH_PATH", "/")
+HTTP_TIMEOUT  = int(os.getenv("HTTP_TIMEOUT", "600"))
 RUN_TIME      = os.getenv("LOCUST_RUN_TIME", "15m")
 SCENARIOS = {
     "offpeak":     "locust_offpeak.py",
     "rushsale":    "locust_rushsale.py",
     "peak":        "locust_peak.py",
     "fluctuating": "locust_fluctuating.py",
-    "cyclic":      "locust_cyclic.py",
 }
 _MULT = {"s": 1, "m": 60, "h": 3600}
 _match = __import__("re").match
 _rt = _match(r"(\d+)([smh])", RUN_TIME)
 RUN_TIME_SEC = int(_rt.group(1)) * _MULT[_rt.group(2)] if _rt else 900
 HALF_RUN_SEC = RUN_TIME_SEC // 2
-MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
+MAX_STATUS_CHECKS = int(os.getenv("MAX_STATUS_CHECKS", "720"))  # stop polling after 1h (720 * 5s)
 
 # ──────────────────────────────────────────────────────────────────────────
 # 2. 小工具
@@ -73,7 +85,7 @@ def panic(msg: str, exc: Exception | None = None) -> None:
     """同步把錯誤印到 console 與 batch.log，再結束進程"""
     logging.error(msg)
     if exc:
-        _tb = "".join(traceback.format_exception(exc))
+        _tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         logging.error(_tb)
         print(_tb, file=sys.stderr)
     sys.exit(1)
@@ -134,13 +146,27 @@ def wait_frontend_ready() -> None:
     raise RuntimeError("frontend never became ready")
 
 
-def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
-    """Start a Locust scenario either locally or via the remote agent."""
+def run_distributed_locust(scenario: str, tag: str, remote: bool, out_dir: Path, experiment_sync: dict = None) -> None:
+    """運行分散式 Locust 測試，支持與實驗訓練同步。
+    
+    Args:
+        scenario: 測試情境名稱
+        tag: 運行標籤
+        remote: 是否使用遠端代理
+        out_dir: 輸出目錄
+        experiment_sync: 實驗同步信息 {"training_proc": subprocess, "sync_points": [...]}
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 檢查實驗訓練進程狀態
+    training_proc = experiment_sync.get("training_proc") if experiment_sync else None
+    if training_proc and training_proc.poll() is not None:
+        logging.warning("Training process terminated before loadtest %s", scenario)
+    
     if remote:
         host = os.environ["M1_HOST"].rstrip("/")
-        logging.info("M1_HOST=%s", host)
-        logging.info("Trigger remote locust %s on %s", scenario, host)
+        logging.info("🔗 分散式測試: M1_HOST=%s", host)
+        logging.info("🚀 觸發遠端 Locust %s 在 %s", scenario, host)
         payload = {
             "tag": tag,
             "scenario": scenario,
@@ -152,48 +178,93 @@ def run_locust(scenario: str, tag: str, remote: bool, out_dir: Path) -> None:
             r = requests.post(f"{host}/start", json=payload, timeout=10)
             r.raise_for_status()
             job_id = r.json()["job_id"]
-            logging.debug("job id %s", job_id)
-              record_kiali_graph("start")
+            logging.info("📋 遠端任務 ID: %s", job_id)
+            
+            # 記錄開始狀態
+            record_kiali_graph("start")
+            
+            # 中途檢查點
             time.sleep(HALF_RUN_SEC)
-              record_kiali_graph("mid")
-            for _ in range(MAX_STATUS_CHECKS):
+            record_kiali_graph("mid")
+            
+            # 等待完成並監控訓練進程
+            for check_count in range(MAX_STATUS_CHECKS):
                 time.sleep(5)
+                
+                # 檢查遠端測試狀態
                 st = requests.get(f"{host}/status/{job_id}", timeout=10)
                 st.raise_for_status()
                 data = st.json()
-                logging.debug("status %s -> %s", job_id, data)
+                
                 if data.get("finished"):
+                    logging.info("✅ 遠端測試 %s 完成", scenario)
                     break
+                    
+                # 每 10 次檢查一次訓練進程
+                if check_count % 10 == 0 and training_proc:
+                    if training_proc.poll() is not None:
+                        logging.warning("⚠️  訓練進程在測試期間終止")
+                        
+                logging.debug("⏳ 遠端測試狀態 [%d/%d]: %s", check_count+1, MAX_STATUS_CHECKS, 
+                            "running" if not data.get("finished") else "finished")
             else:
-                logging.warning("remote locust did not finish in time")
+                logging.warning("⏰ 遠端測試超時，可能仍在運行")
                 return
-              record_kiali_graph("end")
+                
+            record_kiali_graph("end")
+            
+            # 下載結果檔案
+            downloaded_files = []
             for fname in [f"{scenario}_stats.csv", f"{scenario}_stats_history.csv", f"{scenario}.html"]:
                 resp = requests.get(f"{host}/download/{tag}/{fname}", timeout=10)
                 if resp.status_code == 200:
-                    logging.debug("downloaded %s", fname)
                     (out_dir / fname).write_bytes(resp.content)
+                    downloaded_files.append(fname)
+                    logging.debug("📁 已下載: %s", fname)
+                else:
+                    logging.warning("❌ 下載失敗: %s (status: %d)", fname, resp.status_code)
+            
+            logging.info("📊 遠端測試結果: 已下載 %d/%d 檔案", len(downloaded_files), 3)
             return
+            
         except requests.RequestException as exc:
-            logging.error("remote locust failed: %s", exc)
-            logging.info("Fallback to local locust")
+            logging.error("❌ 遠端測試失敗: %s", exc)
+            logging.info("🔄 切換到本地測試")
 
-    script = Path(__file__).parent / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
-    logging.info("Run local locust %s", scenario)
+    # 本地測試 fallback
+    script_path = REPO_ROOT / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+    if not script_path.exists():
+        logging.error("❌ 測試腳本不存在: %s", script_path)
+        return
+        
+    logging.info("🏠 運行本地 Locust %s", scenario)
     cmd = [
-        "locust", "-f", script, "--headless", "--run-time", RUN_TIME,
+        "locust", "-f", str(script_path), "--headless", "--run-time", RUN_TIME,
         "--host", TARGET_HOST,
-        "--csv", out_dir / scenario, "--csv-full-history",
-        "--html", out_dir / f"{scenario}.html",
+        "--csv", str(out_dir / scenario), "--csv-full-history",
+        "--html", str(out_dir / f"{scenario}.html"),
     ]
+    
+    logging.debug("$ %s", " ".join(cmd))
     proc = subprocess.Popen(cmd)
+    
     record_kiali_graph("start")
     time.sleep(HALF_RUN_SEC)
     record_kiali_graph("mid")
-    proc.wait()
+    
+    # 等待本地測試完成，同時監控訓練進程
+    while proc.poll() is None:
+        time.sleep(5)
+        if training_proc and training_proc.poll() is not None:
+            logging.info("ℹ️  訓練進程已完成，繼續等待測試")
+            training_proc = None  # 避免重複記錄
+    
     record_kiali_graph("end")
+    
     if proc.returncode:
-        logging.warning("Locust %s finished with exit-code %s", scenario, proc.returncode)
+        logging.warning("⚠️  本地測試 %s 結束碼: %s", scenario, proc.returncode)
+    else:
+        logging.info("✅ 本地測試 %s 完成", scenario)
 
 
 def summarise(run_tag: str, scenario_dirs: list[Path], namespace: str) -> pd.DataFrame:
@@ -239,6 +310,7 @@ def main() -> None:
         ap.add_argument("--rl-path")          # 可手動覆蓋 repo
         ap.add_argument("--run-tag")
         ap.add_argument("--alg", choices=["ppo", "recurrent_ppo", "a2c"], default="ppo")
+        ap.add_argument("--gnn-model", choices=["gat", "gcn"], default="gat", help="GNN model type for gnnrl experiments")
         ap.add_argument("--k8s", action="store_true")
         ap.add_argument("--use-case", default="redis")
         ap.add_argument("--goal", default="cost")
@@ -248,6 +320,8 @@ def main() -> None:
         ap.add_argument("--load-path")
         ap.add_argument("--steps", type=int, default=500)
         ap.add_argument("--total-steps", type=int, default=5000)
+        ap.add_argument("--seed", type=int, default=42, help="Random seed for scenario order")
+        ap.add_argument("--env-step-interval", type=float, default=15.0, help="Environment step interval in seconds")
         ap.add_argument("--tensorboard-log")
         ap.add_argument("--device", choices=["auto", "cpu", "cuda", "mps"])
         args = ap.parse_args(
@@ -269,11 +343,33 @@ def main() -> None:
         if not run_file.exists():
             panic(f"{run_file} 不存在")
 
-        # 3-3 run-tag & log 目錄
+        # 3-3 run-tag & log 目錄 - 使用新的路徑管理器
         default_tag = f"{args.alg}_{args.model}_{args.total_steps}"
-        run_tag     = args.run_tag or default_tag
-        run_root    = LOG_ROOT / args.model / run_tag
-        run_root.mkdir(parents=True, exist_ok=True)
+        run_tag = args.run_tag or default_tag
+        
+        # 嘗試使用新的統一路徑結構
+        try:
+            sys.path.append(str(REPO_ROOT))
+            from experiment_path_manager import get_path_manager
+            
+            path_manager = get_path_manager()
+            
+            # 如果 run_tag 是新格式，直接使用；否則創建新的實驗目錄
+            if '_' in run_tag and len(run_tag.split('_')) >= 6:
+                # 新格式的 run_tag，直接使用
+                run_root = path_manager.base_dir / run_tag
+                run_root.mkdir(exist_ok=True)
+                (run_root / "loadtest_scenarios").mkdir(exist_ok=True)
+            else:
+                # 舊格式，創建新的實驗目錄但保持向後兼容
+                run_root = LOG_ROOT / args.model / run_tag
+                run_root.mkdir(parents=True, exist_ok=True)
+                
+        except ImportError:
+            # 如果路徑管理器不可用，使用舊方式
+            run_root = LOG_ROOT / args.model / run_tag
+            run_root.mkdir(parents=True, exist_ok=True)
+            
         (run_root / "batch.log").touch(exist_ok=True)   # 確保檔案存在
 
         logging.basicConfig(
@@ -306,6 +402,9 @@ def main() -> None:
             if args.k8s: rl_cmd += ["--k8s"]
             rl_cmd += ["--steps", str(args.total_steps)]  # gnnrl uses --steps for total steps
             if args.goal: rl_cmd += ["--goal", args.goal]
+            if args.gnn_model: rl_cmd += ["--model", args.gnn_model]  # Pass GNN model type
+            if args.alg: rl_cmd += ["--alg", args.alg]  # Pass RL algorithm
+            if args.env_step_interval: rl_cmd += ["--env-step-interval", str(args.env_step_interval)]  # Pass step interval
             if args.tensorboard_log: rl_cmd += ["--tensorboard-log", args.tensorboard_log]
         elif args.model != "hpa":
             rl_cmd += [
@@ -338,31 +437,109 @@ def main() -> None:
             return
         elif args.model == "gnnrl":
             # GNNRL experiment handles its own training loop
-            subprocess.run(rl_cmd, cwd=rl_cwd, check=True)
-            logging.info("✅ GNNRL experiment completed")
-            # Skip loadtest for GNNRL as it focuses on training
-            return
-        rl = subprocess.Popen(rl_cmd, cwd=rl_cwd)
+            rl = subprocess.Popen(rl_cmd, cwd=rl_cwd)
+            logging.info("🔄 GNNRL experiment started, continuing with loadtest...")
+        else:
+            rl = subprocess.Popen(rl_cmd, cwd=rl_cwd)
 
-        # 3-5 決定壓測模式
+        # 3-5 統一實驗與分散式測試協調
         from_locust_remote = bool(os.getenv("M1_HOST"))
-        logging.debug("🛠  Locust mode = %s",
-                      "remote via "+os.getenv("M1_HOST") if from_locust_remote else "local")
-
+        logging.info("🔧 測試模式: %s", 
+                    f"分散式 (代理: {os.getenv('M1_HOST')})" if from_locust_remote else "本地")
+        
+        # 為不同實驗類型設定同步策略
+        experiment_sync = {"training_proc": rl} if 'rl' in locals() else None
+        
+        # 使用 seed 設定隨機種子
+        random.seed(args.seed)
+        scenario_list = list(SCENARIOS.keys())
+        
+        logging.info("🎲 使用隨機種子 %d，可用情境: %s", args.seed, ", ".join(scenario_list))
+        
         scenario_dirs = []
-        for scn in SCENARIOS:
-            out_dir = run_root / scn
+        scenario_count = 0
+        
+        # 檢查是否有 RL 訓練進程需要等待
+        has_training_proc = 'rl' in locals() and rl is not None
+        
+        # 持續隨機執行場景直到訓練完成 (如果有訓練進程) 或至少執行一個場景
+        while True:
+            # 檢查訓練是否完成
+            if has_training_proc and rl.poll() is not None:
+                logging.info("✅ RL 訓練進程已完成")
+                break
+            
+            # 完全隨機選擇場景
+            scn = random.choice(scenario_list)
+            scenario_count += 1
+            
+            # 創建唯一的輸出目錄 (使用計數器避免重複)
+            out_dir = run_root / f"{scn}_{scenario_count:03d}"
+            logging.info("📊 執行隨機測試情境 [第%d個]: %s", scenario_count, scn)
+            
             remote_tag = f"{args.model}/{run_tag}"
-            run_locust(scn, remote_tag if from_locust_remote else run_tag, from_locust_remote, out_dir)
+            
+            # 分散式測試，包含實驗同步
+            run_distributed_locust(
+                scn, 
+                remote_tag if from_locust_remote else run_tag, 
+                from_locust_remote, 
+                out_dir,
+                experiment_sync
+            )
             scenario_dirs.append(out_dir)
+            
+            # 情境間冷卻時間
+            if has_training_proc and rl.poll() is None:
+                cooldown = int(os.getenv("COOLDOWN_BETWEEN_SCENARIOS", "60"))  # 預設1分鐘
+                logging.info("⏸️  情境間冷卻 %d 秒...", cooldown)
+                time.sleep(cooldown)
+            elif not has_training_proc:
+                # 如果沒有訓練進程，執行一個場景後結束
+                break
 
-        rl.wait()
+        # 最終等待訓練完成 (雙重保險)
+        if has_training_proc and rl.poll() is None:
+            logging.info("⏳ 最終等待訓練進程完成...")
+            rl.wait()
+        
+        logging.info("🏁 總共執行了 %d 個隨機場景測試", len(scenario_dirs))
+            
+        # 生成統一報告
         ns = NAMESPACE_REDIS if args.use_case == "redis" else NAMESPACE_OB
+        
+        # 舊版報告（保持向後兼容）
         df = summarise(run_tag, scenario_dirs, ns)
         df.to_csv(run_root / "summary.csv", index=False)
         render_dashboard(df, run_root)
+        
+        # 新版統一報告
+        try:
+            from unified_report_generator import process_experiment_results
+            
+            # 準備實驗配置
+            experiment_config = {
+                "id": run_tag,
+                "type": args.model,
+                "algorithm": args.alg,
+                "model": getattr(args, 'gnn_model', 'default'),
+                "goal": args.goal,
+                "steps": args.total_steps,
+                "seed": args.seed,
+                "start_time": dt.datetime.now().isoformat()
+            }
+            
+            # 生成統一報告
+            process_experiment_results(run_root, scenario_dirs, experiment_config)
+            logging.info("✅ 統一實驗報告已生成")
+            
+        except Exception as e:
+            logging.warning(f"⚠️ 統一報告生成失敗: {e}")
 
-        logging.info("✅ 完成 → %s", run_root)
+        logging.info("🎉 實驗完成 → %s", run_root)
+        logging.info("📈 結果摘要: %s", run_root / "summary.csv")
+        logging.info("🌐 儀表板: %s", run_root / "aggregate.html")
+        logging.info("🔄 統一報告: experiments/ 目錄下")
 
     except Exception as e:
         panic("‼️  rl_batch_loadtest 未預期錯誤", e)
