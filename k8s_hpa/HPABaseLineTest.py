@@ -54,12 +54,12 @@ _match = __import__("re").match
 _rt = _match(r"(\d+)([smh])", RUN_TIME)
 RUN_TIME_SEC = int(_rt.group(1)) * _MULT[_rt.group(2)] if _rt else 900
 HALF_RUN_SEC = RUN_TIME_SEC // 2
-LOG_ROOT = Path("../logs") / "hpa"
+LOG_ROOT = Path(__file__).parent.parent / "logs" / "k8s-hpa"
 MAX_STATUS_CHECKS = 720  # stop polling after 1h (720 * 5s)
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s",
-                    handlers=[logging.FileHandler("batch_run.log"),
+                    handlers=[logging.FileHandler(LOG_ROOT / "batch_run.log"),
                               logging.StreamHandler(sys.stdout)])
 
 # ── helpers ──────────────────────────────────────────────────────────────

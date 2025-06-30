@@ -5,20 +5,21 @@ from matplotlib import pyplot as plt
 def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
     episode_rewards = []
     reward_sum = 0
-    obs = env.reset()
+    obs, _ = env.reset()  # 新的Gymnasium API返回 (obs, info)
 
     print("------------Testing -----------------")
 
     for e in range(n_episodes):
         for _ in range(n_steps):
             action, _ = model.predict(obs)
-            obs, reward, done, _ = env.step(action)
+            obs, reward, terminated, truncated, _ = env.step(action)  # 新的Gymnasium API返回5個值
             reward_sum += reward
+            done = terminated or truncated  # 合併終止條件
             if done:
                 episode_rewards.append(reward_sum)
                 print("Episode {} | Total reward: {} |".format(e, str(reward_sum)))
                 reward_sum = 0
-                obs = env.reset()
+                obs, _ = env.reset()  # 新的Gymnasium API返回 (obs, info)
                 break
 
     env.close()

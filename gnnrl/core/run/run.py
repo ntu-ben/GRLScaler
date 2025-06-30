@@ -69,6 +69,10 @@ def get_model(alg, env, tensorboard_log, use_gnn=False):
 
 
 def get_load_model(alg, tensorboard_log, load_path, use_gnn=False):
+    # Remove .zip extension if present, as stable_baselines3 adds it automatically
+    if load_path.endswith('.zip'):
+        load_path = load_path[:-4]
+    
     if alg == 'ppo':
         policy = "MlpPolicy"
         if use_gnn:
@@ -129,8 +133,11 @@ def main():
     gnn_suffix = "_gnn" if use_gnn else ""
     name = alg + gnn_suffix + "_env_" + env.name + "_goal_" + goal + "_k8s_" + str(k8s) + "_totalSteps_" + str(total_steps)
 
-    # callback
-    checkpoint_callback = CheckpointCallback(save_freq=steps, save_path="logs/" + name, name_prefix=name)
+    # callback - use unified logs directory
+    from pathlib import Path
+    unified_log_path = Path(__file__).parent.parent.parent.parent / "logs" / "gnnrl" / name
+    unified_log_path.mkdir(parents=True, exist_ok=True)
+    checkpoint_callback = CheckpointCallback(save_freq=steps, save_path=str(unified_log_path), name_prefix=name)
 
     if training:
         if loading:  # resume training
@@ -141,7 +148,11 @@ def main():
             model = get_model(alg, env, tensorboard_log, use_gnn)
             model.learn(total_timesteps=total_steps, tb_log_name=name + "_run", callback=checkpoint_callback)
 
-        model.save(name)
+        # Save model to unified models directory
+        model_dir = Path(__file__).parent.parent.parent.parent / "logs" / "models"
+        model_dir.mkdir(parents=True, exist_ok=True)
+        model_path = model_dir / f"{name}.zip"
+        model.save(str(model_path))
 
     if testing:
         model = get_load_model(alg, tensorboard_log, test_path, use_gnn)

@@ -206,7 +206,7 @@ def parse_args():
     
     parser.add_argument(
         '--dataset-path', type=str,
-        default='gnnrl/data/datasets/real/onlineboutique/v1/online_boutique_gym_observation.csv',
+        default=str(Path(__file__).parent.parent / 'data/datasets/real/onlineboutique/v1/online_boutique_gym_observation.csv'),
         help='Dataset path for simulation mode'
     )
     
@@ -216,7 +216,7 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--log-dir', type=str, default='logs/gnnrl',
+        '--log-dir', type=str, default=str(Path(__file__).parent.parent.parent / 'logs' / 'gnnrl'),
         help='Directory for training logs (default: logs/gnnrl)'
     )
     
@@ -280,12 +280,12 @@ def create_model(env, args):
             [('svc', 'calls', 'svc')]  # edge types - only service-to-service calls
         )
         
-        # Setup tensorboard logging - use absolute path
+        # Setup tensorboard logging - use absolute path - 統一到 logs 目錄
         scenario = 'real' if args.k8s else 'simulated'
         tensorboard_log = None
         if not args.no_tensorboard:
-            # 使用絕對路徑，基於專案根目錄
-            results_dir = Path(__file__).parent.parent.parent / "results" / "online_boutique" / scenario / args.goal
+            # 使用絕對路徑，基於專案根目錄 - 統一到 logs 目錄
+            results_dir = Path(__file__).parent.parent.parent / "logs" / "gnnrl" / "tensorboard" / "online_boutique" / scenario / args.goal
             results_dir.mkdir(parents=True, exist_ok=True)
             tensorboard_log = str(results_dir)
             logger.info(f"Tensorboard logging enabled: {tensorboard_log}")
@@ -404,10 +404,13 @@ def run_experiment(args):
         training_time = time.time() - start_time
         logger.info(f"✅ Training completed in {training_time:.2f} seconds")
         
-        # Save final model
+        # Save final model to unified logs directory
+        model_dir = Path(__file__).parent.parent.parent / "logs" / "models"
+        model_dir.mkdir(parents=True, exist_ok=True)
         model_filename = f"gnnrl_{args.model}_{args.goal}_k8s_{args.k8s}_steps_{args.steps}.zip"
-        model.save(model_filename)
-        logger.info(f"📁 Model saved as: {model_filename}")
+        model_path = model_dir / model_filename
+        model.save(str(model_path))
+        logger.info(f"📁 Model saved as: {model_path}")
         
         # Print summary
         logger.info("="*60)

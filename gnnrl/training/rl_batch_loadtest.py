@@ -100,18 +100,22 @@ def sh(cmd: List[str]) -> None:
 def record_kiali_graph(stage: str) -> None:
     """Dump Kiali service graph for the namespace."""
     logging.info("kiali graph (%s)", stage)
-    url = f"{os.getenv('KIALI_URL', 'http://localhost:20001/kiali')}/api/namespaces/{NAMESPACE}/graph"
+    kiali_base = os.getenv('KIALI_URL', 'http://localhost:20001/kiali')
+    # 使用正确的 Kiali v1.7x+ 多命名空间 API 格式
+    url = f"{kiali_base}/api/namespaces/graph?namespaces={NAMESPACE}&duration=600s&graphType=workload"
     try:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         Path(f"kiali_{stage}.json").write_text(resp.text, encoding="utf-8")
+        logging.info("✅ Kiali graph saved: kiali_%s.json", stage)
     except Exception as err:
         logging.warning("kiali graph failed: %s", err)
 
 
 def get_kiali_rps(namespace: str = NAMESPACE) -> float | None:
     """Query Kiali metrics and return average RPS for all workloads."""
-    url = f"{os.getenv('KIALI_URL', 'http://localhost:30326/kiali')}/api/namespaces/{namespace}/metrics?metrics=request_count"
+    kiali_base = os.getenv('KIALI_URL', 'http://localhost:20001/kiali')
+    url = f"{kiali_base}/api/namespaces/{namespace}/metrics?metrics=request_count"
     try:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
@@ -419,7 +423,15 @@ def main() -> None:
             if args.testing:
                 if not args.load_path:
                     panic("--testing 需搭配 --load-path")
-                rl_cmd += ["--testing", "--test_path", args.load_path]
+                # Convert path relative to gym-hpa directory
+                from pathlib import Path
+                load_path = Path(args.load_path)
+                if not load_path.is_absolute():
+                    # Make path relative to gym-hpa directory
+                    relative_load_path = "../" + str(load_path)
+                else:
+                    relative_load_path = str(load_path)
+                rl_cmd += ["--testing", "--test_path", relative_load_path]
             if args.loading:
                 if not args.load_path:
                     panic("--loading 需搭配 --load-path")
