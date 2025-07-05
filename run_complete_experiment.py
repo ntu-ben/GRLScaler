@@ -4,6 +4,7 @@
 ====================================
 
 替代 bash 腳本，提供更穩定的實驗執行流程。
+支持標準化場景確保公平比較。
 """
 
 import os
@@ -11,14 +12,16 @@ import sys
 import subprocess
 import time
 import argparse
+import json
 from pathlib import Path
 from datetime import datetime
 from experiment_planner import ExperimentPlanner
 
 class ExperimentRunner:
-    def __init__(self, repo_root: Path = None):
+    def __init__(self, repo_root: Path = None, use_standardized_scenarios: bool = False):
         self.repo_root = repo_root or Path(__file__).parent
         self.planner = ExperimentPlanner(repo_root)
+        self.use_standardized_scenarios = use_standardized_scenarios
         
         # 預設配置
         self.config = {
@@ -29,6 +32,24 @@ class ExperimentRunner:
             'model': 'gat',
             'alg': 'ppo'
         }
+        
+        # 如果使用標準化場景，載入配置
+        if self.use_standardized_scenarios:
+            self._ensure_standardized_config()
+    
+    def _ensure_standardized_config(self):
+        """確保標準化配置文件存在"""
+        config_file = self.repo_root / "standardized_test_scenarios.json"
+        
+        if not config_file.exists():
+            self.log_info("🔧 生成標準化場景配置...")
+            subprocess.run([sys.executable, "standardized_test_config.py"], 
+                         cwd=self.repo_root, check=True)
+        
+        with open(config_file, 'r', encoding='utf-8') as f:
+            self.scenario_config = json.load(f)
+            
+        self.log_info(f"✅ 載入標準化配置：{len(self.scenario_config['scenarios'])} 個場景")
         
     def log_info(self, message: str):
         """資訊日誌"""
@@ -74,14 +95,21 @@ class ExperimentRunner:
     
     def run_gym_hpa_experiment(self, plan: dict) -> bool:
         """執行 Gym-HPA 實驗"""
-        self.log_section("🎯 實驗 1/3: Gym-HPA (基礎強化學習)")
+        if self.use_standardized_scenarios:
+            self.log_section("🎯 實驗 1/3: Gym-HPA (標準化場景)")
+            self.log_info(f"📊 將執行 {len(self.scenario_config['scenarios'])} 個標準化場景")
+        else:
+            self.log_section("🎯 實驗 1/3: Gym-HPA (基礎強化學習)")
         
         gym_plan = plan.get('gym_hpa', {})
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # 選擇實驗管理器
+        manager_script = "standardized_experiment_manager.py" if self.use_standardized_scenarios else "unified_experiment_manager.py"
+        
         # 構建命令
         cmd = [
-            sys.executable, "unified_experiment_manager.py",
+            sys.executable, manager_script,
             "--experiment", "gym_hpa",
             "--k8s",
             "--use-case", self.config['use_case'],
@@ -127,14 +155,21 @@ class ExperimentRunner:
     
     def run_gnnrl_experiment(self, plan: dict) -> bool:
         """執行 GNNRL 實驗"""
-        self.log_section("🧠 實驗 2/3: GNNRL (圖神經網路強化學習)")
+        if self.use_standardized_scenarios:
+            self.log_section("🧠 實驗 2/3: GNNRL (標準化場景)")
+            self.log_info(f"📊 將執行 {len(self.scenario_config['scenarios'])} 個標準化場景")
+        else:
+            self.log_section("🧠 實驗 2/3: GNNRL (圖神經網路強化學習)")
         
         gnnrl_plan = plan.get('gnnrl', {})
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # 選擇實驗管理器
+        manager_script = "standardized_experiment_manager.py" if self.use_standardized_scenarios else "unified_experiment_manager.py"
+        
         # 構建命令
         cmd = [
-            sys.executable, "unified_experiment_manager.py",
+            sys.executable, manager_script,
             "--experiment", "gnnrl",
             "--k8s",
             "--goal", self.config['goal'],
@@ -180,12 +215,19 @@ class ExperimentRunner:
     
     def run_k8s_hpa_experiment(self) -> bool:
         """執行 K8s-HPA 實驗"""
-        self.log_section("⚖️ 實驗 3/3: K8s-HPA (原生HPA基準測試)")
+        if self.use_standardized_scenarios:
+            self.log_section("⚖️ 實驗 3/3: K8s-HPA (標準化場景)")
+            self.log_info(f"📊 將對每個HPA配置執行 {len(self.scenario_config['scenarios'])} 個標準化場景")
+        else:
+            self.log_section("⚖️ 實驗 3/3: K8s-HPA (原生HPA基準測試)")
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # 選擇實驗管理器
+        manager_script = "standardized_experiment_manager.py" if self.use_standardized_scenarios else "unified_experiment_manager.py"
+        
         cmd = [
-            sys.executable, "unified_experiment_manager.py",
+            sys.executable, manager_script,
             "--experiment", "k8s_hpa",
             "--hpa-type", "cpu",
             "--seed", str(self.config['seed']),
@@ -193,9 +235,13 @@ class ExperimentRunner:
         ]
         
         try:
-            self.log_info("🧪 開始 K8s-HPA CPU配置測試...")
-            self.log_info("📋 將測試 4 種 CPU 配置: cpu-20, cpu-40, cpu-60, cpu-80")
-            self.log_info("📊 每種配置運行 4 個場景，共 16 個測試")
+            if self.use_standardized_scenarios:
+                self.log_info("🧪 開始 K8s-HPA 標準化測試...")
+                self.log_info(f"📊 使用 {len(self.scenario_config['scenarios'])} 個標準化場景進行測試")
+            else:
+                self.log_info("🧪 開始 K8s-HPA CPU配置測試...")
+                self.log_info("📋 將測試 4 種 CPU 配置: cpu-20, cpu-40, cpu-60, cpu-80")
+                self.log_info("📊 每種配置運行 4 個場景，共 16 個測試")
             
             result = subprocess.run(cmd, cwd=self.repo_root)
             
@@ -217,10 +263,18 @@ class ExperimentRunner:
         try:
             self.log_info("🔍 分析所有實驗結果...")
             
-            # 檢查分析腳本是否存在
-            analysis_script = self.repo_root / "analyze_results.py"
+            # 選擇適當的分析腳本
+            if self.use_standardized_scenarios:
+                analysis_script = self.repo_root / "analyze_standardized_results.py"
+                script_name = "analyze_standardized_results.py"
+                self.log_info("🎯 使用標準化結果分析器")
+            else:
+                analysis_script = self.repo_root / "analyze_results.py"
+                script_name = "analyze_results.py"
+                self.log_info("📊 使用一般結果分析器")
+            
             if analysis_script.exists():
-                result = subprocess.run([sys.executable, "analyze_results.py"], cwd=self.repo_root)
+                result = subprocess.run([sys.executable, script_name], cwd=self.repo_root)
                 if result.returncode != 0:
                     self.log_error("結果分析失敗")
                     return False
@@ -267,7 +321,7 @@ class ExperimentRunner:
                 self.log_section("📋 實驗規劃階段")
                 if not self.check_prerequisites():
                     return False
-                plan = self.planner.plan_experiments(steps, goal, model)
+                plan = self.planner.plan_experiments(steps, goal, model, [])
                 self.planner.save_plan()
                 self.log_success("實驗規劃完成，已保存到 experiment_plan.json")
                 return True
@@ -394,7 +448,7 @@ class ExperimentRunner:
             
             # 2. 實驗規劃
             if 'plan' not in skip_stages:
-                plan = self.planner.plan_experiments(steps, goal, model)
+                plan = self.planner.plan_experiments(steps, goal, model, skip_stages)
             else:
                 self.log_info("⏭️  跳過實驗規劃階段")
                 # 嘗試載入現有計劃
@@ -425,8 +479,12 @@ class ExperimentRunner:
                 self.log_info("⏭️  跳過 GNNRL 實驗")
                 
             if 'k8s-hpa' not in skip_stages:
-                if not self.run_k8s_hpa_experiment():
-                    return False
+                k8s_plan = plan.get('k8s_hpa', {})
+                if k8s_plan.get('skip_experiment', False):
+                    self.log_info("⏭️  根據規劃跳過 K8s-HPA 實驗")
+                else:
+                    if not self.run_k8s_hpa_experiment():
+                        return False
             else:
                 self.log_info("⏭️  跳過 K8s-HPA 實驗")
             
@@ -447,10 +505,20 @@ class ExperimentRunner:
             print(f"\033[0;32m總耗時: {hours}時{minutes}分{seconds}秒\033[0m")
             print()
             print("\033[0;36m📈 下一步分析:\033[0m")
-            print("1. 查看比較結果: cat logs/experiment_comparison.csv")
-            print("2. 啟動 TensorBoard: tensorboard --logdir logs")
-            print("3. 詳細分析: python analyze_results.py")
-            print("4. 查看測試序列: cat logs/hpa_scenario_sequence.txt")
+            
+            if self.use_standardized_scenarios:
+                print("1. 查看標準化比較: cat logs/standardized_method_comparison.csv")
+                print("2. 查看場景比較: cat logs/standardized_scenario_comparison.csv")
+                print("3. 查看負載分析: cat logs/standardized_load_type_analysis.csv")
+                print("4. 詳細分析: python analyze_standardized_results.py")
+                print("5. 啟動 TensorBoard: tensorboard --logdir logs")
+                print("6. 查看場景序列: cat standardized_scenario_sequence.txt")
+                print("7. 查看分析報告: cat STANDARDIZED_COMPARISON_REPORT.md")
+            else:
+                print("1. 查看比較結果: cat logs/experiment_comparison.csv")
+                print("2. 啟動 TensorBoard: tensorboard --logdir logs")
+                print("3. 詳細分析: python analyze_results.py")
+                print("4. 查看測試序列: cat logs/hpa_scenario_sequence.txt")
             
             return True
             
@@ -468,6 +536,10 @@ def main():
     parser.add_argument('--goal', default='latency', help='目標 (latency/cost)')
     parser.add_argument('--model', default='gat', help='GNNRL 模型類型')
     
+    # 標準化場景選項
+    parser.add_argument('--standardized', action='store_true', 
+                       help='使用標準化的8個場景確保公平比較 (推薦用於方法對比)')
+    
     # 階段選擇功能
     stage_group = parser.add_mutually_exclusive_group()
     stage_group.add_argument('--stage', choices=['plan', 'gym-hpa', 'gnnrl', 'k8s-hpa', 'analysis'], 
@@ -478,7 +550,15 @@ def main():
     
     args = parser.parse_args()
     
-    runner = ExperimentRunner()
+    # 如果使用標準化場景，顯示說明
+    if args.standardized:
+        print("🎯 使用標準化場景模式")
+        print("✅ 確保三種方法測試相同的8個場景，提供公平比較")
+        print("📊 場景分佈: 2個offpeak + 2個peak + 2個rushsale + 2個fluctuating")
+        print("🎲 基於固定種子生成，結果可重現")
+        print()
+    
+    runner = ExperimentRunner(use_standardized_scenarios=args.standardized)
     
     # 處理階段選擇
     if args.stage:

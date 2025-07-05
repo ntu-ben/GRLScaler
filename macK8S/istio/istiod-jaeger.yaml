@@ -1,8 +1,26 @@
-meshConfig:
-  enableTracing: true
-  defaultConfig:
-    tracing:
-      sampling: 100.0         # 100% 採樣（測試用）
-      zipkin:
-        address: zipkin.istio-system.svc.cluster.local:9411
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: tracing
+  namespace: istio-system
+spec:
+  # ★ 若你用 revision 安裝，把下面改成相同 revision
+  profile: default
+  meshConfig:
+    enableTracing: true
+    # ─── Legacy Zipkin (給側車發 HTTP span) ───
+    defaultConfig:
+      tracing:
+        sampling: 100            # 測試用 100%，正式建議 1~5
+        zipkin:
+          address: zipkin.istio-system.svc.cluster.local:9411
+    # ─── Telemetry v2 (OTLP gRPC) ───
+    extensionProviders:
+    - name: jaeger
+      opentelemetry:
+        service: jaeger-collector.istio-system.svc.cluster.local
+        port: 4317
+        # 可加下面兩行指定協定，否則預設 OTLP/gRPC
+        # protocol: grpc
+        # version: v1
 

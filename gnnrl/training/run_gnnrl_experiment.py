@@ -195,6 +195,16 @@ def parse_args():
     )
     
     parser.add_argument(
+        '--testing', action='store_true',
+        help='Testing mode: load trained model and run evaluation (no training)'
+    )
+    
+    parser.add_argument(
+        '--load-path', type=str,
+        help='Path to trained model file for testing mode'
+    )
+    
+    parser.add_argument(
         '--alg', choices=['ppo', 'a2c'], default='ppo',
         help='RL Algorithm (default: ppo)'
     )
@@ -337,13 +347,19 @@ def create_model(env, args):
 def run_experiment(args):
     """Run the main GNNRL experiment."""
     logger.info("="*60)
-    logger.info("🚀 Starting GNNRL Experiment")
+    if args.testing:
+        logger.info("🧪 Starting GNNRL Testing (Evaluation Mode)")
+    else:
+        logger.info("🚀 Starting GNNRL Training")
     logger.info("="*60)
     logger.info(f"Algorithm: {args.alg.upper()}")
     logger.info(f"Mode: {'Live K8s Cluster' if args.k8s else 'Simulation'}")
     logger.info(f"Model: {args.model.upper()}")
     logger.info(f"Goal: {args.goal}")
-    logger.info(f"Steps: {args.steps:,}")
+    if args.testing:
+        logger.info(f"Model Path: {args.load_path}")
+    else:
+        logger.info(f"Steps: {args.steps:,}")
     logger.info(f"Embedding Dimension: {args.embed_dim}")
     logger.info("="*60)
     
@@ -363,70 +379,140 @@ def run_experiment(args):
     if env is None:
         return False
     
-    # Create model
-    model = create_model(env, args)
-    if model is None:
-        return False
-    
-    # Setup callbacks
-    callbacks = []
-    
-    # Detailed logging callback
-    detailed_logging = DetailedLoggingCallback(verbose=1)
-    callbacks.append(detailed_logging)
-    
-    # Checkpoint callback
-    checkpoint_callback = CheckpointCallback(
-        save_freq=args.save_freq,
-        save_path=args.log_dir,
-        name_prefix=f"gnnrl_{args.model}_{args.goal}"
-    )
-    callbacks.append(checkpoint_callback)
-    
-    callback_list = CallbackList(callbacks)
-    
-    # Run training
-    logger.info(f"🎯 Starting training for {args.steps:,} steps...")
-    start_time = time.time()
-    
     try:
-        # Create tensorboard log name - follow gym_hpa naming convention with gnn suffix
-        env_name = "online_boutique_gym"
-        tb_log_name = f"{args.alg}_{args.model}_env_{env_name}_goal_{args.goal}_k8s_{args.k8s}_totalSteps_{args.steps}"
+        # Create or load model
+        if args.testing and args.load_path:
+            # Testing mode: load existing model
+            logger.info(f"🔄 Loading trained model from: {args.load_path}")
+            try:
+                # Remove .zip extension if present, as stable_baselines3 adds it automatically
+                load_path = args.load_path
+                if load_path.endswith('.zip'):
+                    load_path = load_path[:-4]
+                
+                if args.alg == 'a2c':
+                    model = A2C.load(load_path, env=env)
+                else:  # default to PPO
+                    model = PPO.load(load_path, env=env)
+                
+                logger.info("✅ Model loaded successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to load model: {e}")
+                return False
+        else:
+            # Training mode: create new model
+            model = create_model(env, args)
+            if model is None:
+                return False
         
-        model.learn(
-            total_timesteps=args.steps,
-            callback=callback_list,
-            tb_log_name=tb_log_name,
-            progress_bar=False  # Disable progress bar to avoid tqdm dependency
-        )
-        
-        training_time = time.time() - start_time
-        logger.info(f"✅ Training completed in {training_time:.2f} seconds")
-        
-        # Save final model to unified logs directory
-        model_dir = Path(__file__).parent.parent.parent / "logs" / "models"
-        model_dir.mkdir(parents=True, exist_ok=True)
-        model_filename = f"gnnrl_{args.model}_{args.goal}_k8s_{args.k8s}_steps_{args.steps}.zip"
-        model_path = model_dir / model_filename
-        model.save(str(model_path))
-        logger.info(f"📁 Model saved as: {model_path}")
-        
-        # Print summary
-        logger.info("="*60)
-        logger.info("📊 Experiment Summary")
-        logger.info("="*60)
-        logger.info(f"Training steps: {args.steps:,}")
-        logger.info(f"Training time: {training_time:.2f} seconds")
-        logger.info(f"Steps per second: {args.steps/training_time:.2f}")
-        logger.info(f"Final model: {model_filename}")
-        logger.info("="*60)
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"❌ Training failed: {e}")
-        return False
+        if args.testing:
+            # Testing mode: evaluate the loaded model
+            logger.info("🧪 Starting model evaluation...")
+            start_time = time.time()
+            
+            try:
+                # Run a few episodes to test the model
+                num_episodes = 5
+                total_reward = 0
+                total_steps = 0
+                
+                for episode in range(num_episodes):
+                    obs = env.reset()
+                    episode_reward = 0
+                    episode_steps = 0
+                    done = False
+                    
+                    logger.info(f"🎮 Running episode {episode + 1}/{num_episodes}")
+                    
+                    while not done and episode_steps < 1000:  # Limit episode length
+                        action, _ = model.predict(obs, deterministic=True)
+                        obs, reward, done, info = env.step(action)
+                        episode_reward += reward
+                        episode_steps += 1
+                    
+                    total_reward += episode_reward
+                    total_steps += episode_steps
+                    logger.info(f"  Episode {episode + 1}: Reward = {episode_reward:.2f}, Steps = {episode_steps}")
+                
+                avg_reward = total_reward / num_episodes
+                avg_steps = total_steps / num_episodes
+                test_time = time.time() - start_time
+                
+                logger.info("="*60)
+                logger.info("📊 Testing Summary")
+                logger.info("="*60)
+                logger.info(f"Episodes: {num_episodes}")
+                logger.info(f"Average reward: {avg_reward:.2f}")
+                logger.info(f"Average steps per episode: {avg_steps:.2f}")
+                logger.info(f"Testing time: {test_time:.2f} seconds")
+                logger.info("="*60)
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"❌ Testing failed: {e}")
+                return False
+        else:
+            # Training mode
+            # Setup callbacks
+            callbacks = []
+            
+            # Detailed logging callback
+            detailed_logging = DetailedLoggingCallback(verbose=1)
+            callbacks.append(detailed_logging)
+            
+            # Checkpoint callback
+            checkpoint_callback = CheckpointCallback(
+                save_freq=args.save_freq,
+                save_path=args.log_dir,
+                name_prefix=f"gnnrl_{args.model}_{args.goal}"
+            )
+            callbacks.append(checkpoint_callback)
+            
+            callback_list = CallbackList(callbacks)
+            
+            # Run training
+            logger.info(f"🎯 Starting training for {args.steps:,} steps...")
+            start_time = time.time()
+            
+            try:
+                # Create tensorboard log name - follow gym_hpa naming convention with gnn suffix
+                env_name = "online_boutique_gym"
+                tb_log_name = f"{args.alg}_{args.model}_env_{env_name}_goal_{args.goal}_k8s_{args.k8s}_totalSteps_{args.steps}"
+                
+                model.learn(
+                    total_timesteps=args.steps,
+                    callback=callback_list,
+                    tb_log_name=tb_log_name,
+                    progress_bar=False  # Disable progress bar to avoid tqdm dependency
+                )
+                
+                training_time = time.time() - start_time
+                logger.info(f"✅ Training completed in {training_time:.2f} seconds")
+                
+                # Save final model to unified logs directory
+                model_dir = Path(__file__).parent.parent.parent / "logs" / "models"
+                model_dir.mkdir(parents=True, exist_ok=True)
+                model_filename = f"gnnrl_{args.model}_{args.goal}_k8s_{args.k8s}_steps_{args.steps}.zip"
+                model_path = model_dir / model_filename
+                model.save(str(model_path))
+                logger.info(f"📁 Model saved as: {model_path}")
+                
+                # Print summary
+                logger.info("="*60)
+                logger.info("📊 Training Summary")
+                logger.info("="*60)
+                logger.info(f"Training steps: {args.steps:,}")
+                logger.info(f"Training time: {training_time:.2f} seconds")
+                logger.info(f"Steps per second: {args.steps/training_time:.2f}")
+                logger.info(f"Final model: {model_filename}")
+                logger.info("="*60)
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"❌ Training failed: {e}")
+                return False
     
     finally:
         env.close()

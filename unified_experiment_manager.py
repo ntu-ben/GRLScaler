@@ -87,7 +87,7 @@ class UnifiedExperimentManager:
     def _setup_hpa_configurations(self):
         """設定 HPA 配置選項"""
         self.hpa_configs = {
-            'cpu': ['cpu-20', 'cpu-40', 'cpu-60', 'cpu-80'],
+            'cpu': ['cpu-40'],  # 只測試 CPU-40% 配置
             'mem': ['mem-40', 'mem-80'],
             'hybrid': [
                 'cpu-20-mem-40', 'cpu-20-mem-80',
@@ -343,15 +343,21 @@ class UnifiedExperimentManager:
         
         # GNNRL 測試模式處理
         if kwargs.get('testing', False):
-            self.logger.info("🧪 GNNRL 測試模式：載入已訓練模型進行純負載測試")
+            self.logger.info("🧪 GNNRL 測試模式：載入已訓練模型進行評估")
             load_path = kwargs.get('load_path')
             if not load_path or not Path(load_path).exists():
                 self.logger.error(f"❌ 模型檔案不存在: {load_path}")
                 return False
             
-            self.logger.info(f"📂 驗證模型檔案: {load_path}")
-            # GNNRL 測試模式不啟動訓練進程，只執行負載測試
-            training_proc = None
+            cmd.extend([
+                "--testing",
+                "--load-path", str(load_path)
+            ])
+            
+            self.logger.info(f"📂 載入模型檔案: {load_path}")
+            # 測試模式：執行測試腳本後進行負載測試
+            training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
+            self.logger.info(f"🔄 GNNRL 測試進程已開始...")
         else:
             # 訓練模式：啟動 GNNRL 訓練進程
             self.logger.info("🎯 使用訓練模式")

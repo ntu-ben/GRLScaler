@@ -31,6 +31,11 @@ class ExperimentPlanner:
                 'name': 'GNNRL (圖神經網路強化學習)', 
                 'pattern': 'gnnrl_{model}_{goal}_k8s_True_steps_{steps}.zip',
                 'search_pattern': 'gnnrl*{steps}*.zip'
+            },
+            'k8s_hpa': {
+                'name': 'K8s-HPA (原生HPA基準測試)',
+                'pattern': None,  # K8s-HPA 不需要模型檔案
+                'search_pattern': None
             }
         }
         
@@ -41,9 +46,17 @@ class ExperimentPlanner:
         """尋找指定實驗的現有模型"""
         if experiment not in self.experiments:
             return []
+        
+        # K8s-HPA 不需要模型檔案
+        if experiment == 'k8s_hpa':
+            return []
+            
+        search_pattern = self.experiments[experiment]['search_pattern']
+        if not search_pattern:
+            return []
             
         # 使用 search_pattern 來尋找模型
-        search_pattern = self.experiments[experiment]['search_pattern'].format(
+        search_pattern = search_pattern.format(
             steps=steps, goal=goal, model=model
         )
         
@@ -87,6 +100,34 @@ class ExperimentPlanner:
             action 可能的值: 'use_existing', 'retrain', 'skip', 'exit'
         """
         exp_name = self.experiments[experiment]['name']
+        
+        # K8s-HPA 特殊處理
+        if experiment == 'k8s_hpa':
+            print(f"📋 {exp_name} 不需要訓練模型，將直接進行基準測試")
+            print(f"請選擇操作:")
+            print(f"  1) 進行 K8s-HPA 基準測試")
+            print(f"  2) 跳過此實驗")
+            print(f"  3) 退出實驗")
+            
+            while True:
+                try:
+                    choice = input("請輸入選擇 [1-3]: ").strip()
+                    
+                    if choice == '1':
+                        print(f"🔄 將進行 {exp_name} 基準測試")
+                        return 'retrain', None  # 對K8s-HPA來說，這意味著運行測試
+                    elif choice == '2':
+                        print(f"⏭️  將跳過 {exp_name} 實驗")
+                        return 'skip', None
+                    elif choice == '3':
+                        print("👋 用戶選擇退出實驗")
+                        return 'exit', None
+                    else:
+                        print("❌ 無效選擇，請輸入 1-3")
+                        
+                except KeyboardInterrupt:
+                    print("\n👋 用戶中斷實驗")
+                    return 'exit', None
         
         if not models:
             print(f"❌ 未找到現有的 {exp_name} 模型")
@@ -184,17 +225,33 @@ class ExperimentPlanner:
                 print("\n👋 輸入結束，退出實驗")
                 return 'exit', None
     
-    def plan_experiments(self, steps: int = 5000, goal: str = "latency", model: str = "gat") -> Dict:
+    def plan_experiments(self, steps: int = 5000, goal: str = "latency", model: str = "gat", skip_stages: List[str] = None) -> Dict:
         """規劃所有實驗"""
         print("=" * 50)
         print("📋 實驗規劃和模型檢查")
         print("=" * 50)
         print("檢查現有模型並規劃實驗...")
         
+        if skip_stages is None:
+            skip_stages = []
+        
         plan = {}
         
         # 檢查每個實驗
         for exp_key, exp_config in self.experiments.items():
+            # 如果實驗在跳過列表中，自動跳過
+            exp_key_with_dash = exp_key.replace('_', '-')
+            if exp_key_with_dash in skip_stages:
+                print(f"\n{'=' * 20} {exp_config['name']} {'=' * 20}")
+                print(f"⏭️  根據命令行參數跳過 {exp_config['name']}")
+                plan[exp_key] = {
+                    'skip_experiment': True,
+                    'skip_training': False,
+                    'model_path': None,
+                    'experiment_name': exp_config['name']
+                }
+                continue
+                
             print(f"\n{'=' * 20} {exp_config['name']} {'=' * 20}")
             
             models = self.find_models(exp_key, steps, goal, model)
@@ -251,9 +308,11 @@ class ExperimentPlanner:
                 print(f"│ {exp_name:11} │ 使用現有模型  │ 跳過訓練，直接測試      │")
                 print(f"│             │ {model_name[:13]:13} │                         │")
             else:
-                print(f"│ {exp_name:11} │ 新訓練模型    │ 完整訓練 + 測試         │")
-        
-        print("│ K8s-HPA     │ 無需模型      │ 直接基準測試            │")
+                # K8s-HPA 特殊處理
+                if exp_key == 'k8s_hpa':
+                    print(f"│ {exp_name:11} │ 無需模型      │ 直接基準測試            │")
+                else:
+                    print(f"│ {exp_name:11} │ 新訓練模型    │ 完整訓練 + 測試         │")
         print("└─────────────────────────────────────────────────────────┘")
     
     def save_plan(self, output_file: Path = None):

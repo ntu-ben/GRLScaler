@@ -70,20 +70,35 @@ def analyze_kiali_graph(kiali_file):
     }
 
 def find_experiment_results(experiment_type):
-    """找到最新的實驗結果目錄"""
+    """找到實驗結果目錄，分別處理訓練和測試數據"""
     logs_dir = Path(__file__).parent / 'logs' / experiment_type
     if not logs_dir.exists():
-        return []
+        return [], "unknown"
     
-    # 找到所有測試目錄
+    # 優先尋找測試目錄
     test_dirs = [d for d in logs_dir.iterdir() if d.is_dir() and 'test' in d.name]
-    
-    # 按修改時間排序，取最新的
     if test_dirs:
         latest_dir = max(test_dirs, key=lambda d: d.stat().st_mtime)
-        return list(latest_dir.glob('*/'))
+        data_type = "test"
+    else:
+        # 如果沒有test目錄，使用train目錄
+        train_dirs = [d for d in logs_dir.iterdir() if d.is_dir() and ('train' in d.name or 'cpu' in d.name)]
+        if train_dirs:
+            latest_dir = max(train_dirs, key=lambda d: d.stat().st_mtime)
+            data_type = "train" if 'train' in latest_dir.name else "test"
+        else:
+            return [], "unknown"
     
-    return []
+    # 對於k8s-hpa，需要進一步查找cpu配置目錄
+    if experiment_type == 'k8s-hpa':
+        cpu_dirs = [d for d in latest_dir.iterdir() if d.is_dir() and 'cpu-' in d.name]
+        if cpu_dirs:
+            all_scenarios = []
+            for cpu_dir in cpu_dirs:
+                all_scenarios.extend(list(cpu_dir.glob('*/')))
+            return all_scenarios, data_type
+    
+    return list(latest_dir.glob('*/')), data_type
 
 def generate_comparison_report():
     """生成三種方法的比較報告"""
@@ -99,12 +114,17 @@ def generate_comparison_report():
     all_results = {}
     
     for exp_name, exp_type in experiments.items():
-        print(f"\n📊 {exp_name} 結果分析")
-        print("-" * 30)
+        scenario_dirs, data_type = find_experiment_results(exp_type)
         
-        scenario_dirs = find_experiment_results(exp_type)
+        print(f"\n📊 {exp_name} 結果分析")
+        if data_type == "train":
+            print(f"⚠️  使用訓練階段數據 (未找到測試數據)")
+        elif data_type == "test":
+            print(f"✅ 使用測試階段數據")
+        print("-" * 40)
+        
         if not scenario_dirs:
-            print(f"❌ 未找到 {exp_name} 的測試結果")
+            print(f"❌ 未找到 {exp_name} 的結果數據")
             continue
         
         exp_results = []
@@ -133,7 +153,8 @@ def generate_comparison_report():
             avg_response_time = sum(r['avg_response_time'] * r['total_requests'] for r in exp_results) / total_requests if total_requests > 0 else 0
             avg_p95 = sum(r['p95_response_time'] for r in exp_results) / len(exp_results)
             
-            print(f"  📋 {exp_name} 總計:")
+            data_note = " (訓練數據)" if data_type == "train" else " (測試數據)"
+            print(f"  📋 {exp_name} 總計{data_note}:")
             print(f"    場景數: {len(exp_results)}")
             print(f"    總請求數: {total_requests:,}")
             print(f"    加權平均響應時間: {avg_response_time:.2f} ms")

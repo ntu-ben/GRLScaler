@@ -1,0 +1,96 @@
+{
+  "experiment_config": {
+    "seed": 42,
+    "total_scenarios": 8,
+    "scenario_duration_minutes": 15,
+    "description": "標準化三方法比較實驗配置"
+  },
+  "scenarios": [
+    {
+      "id": "peak_001",
+      "type": "peak",
+      "pattern": "peak",
+      "description": "高負載穩定場景",
+      "expected_load": "high",
+      "duration": 15,
+      "seed": 43,
+      "sequence_order": 1
+    },
+    {
+      "id": "rushsale_002",
+      "type": "rushsale",
+      "pattern": "rushsale",
+      "description": "突發銷售場景",
+      "expected_load": "burst",
+      "duration": 15,
+      "seed": 44,
+      "sequence_order": 2
+    },
+    {
+      "id": "fluctuating_003",
+      "type": "fluctuating",
+      "pattern": "fluctuating",
+      "description": "波動負載場景",
+      "expected_load": "variable",
+      "duration": 15,
+      "seed": 45,
+      "sequence_order": 3
+    },
+    {
+      "id": "fluctuating_004",
+      "type": "fluctuating",
+      "pattern": "fluctuating",
+      "description": "波動負載場景",
+      "expected_load": "variable",
+      "duration": 15,
+      "seed": 46,
+      "sequence_order": 4
+    },
+    {
+      "id": "peak_005",
+      "type": "peak",
+      "pattern": "peak",
+      "description": "高負載穩定場景",
+      "expected_load": "high",
+      "duration": 15,
+      "seed": 47,
+      "sequence_order": 5
+    },
+    {
+      "id": "rushsale_006",
+      "type": "rushsale",
+      "pattern": "rushsale",
+      "description": "突發銷售場景",
+      "expected_load": "burst",
+      "duration": 15,
+      "seed": 48,
+      "sequence_order": 6
+    },
+    {
+      "id": "offpeak_007",
+      "type": "offpeak",
+      "pattern": "offpeak",
+      "description": "低負載穩定場景",
+      "expected_load": "low",
+      "duration": 15,
+      "seed": 49,
+      "sequence_order": 7
+    },
+    {
+      "id": "offpeak_008",
+      "type": "offpeak",
+      "pattern": "offpeak",
+      "description": "低負載穩定場景",
+      "expected_load": "low",
+      "duration": 15,
+      "seed": 50,
+      "sequence_order": 8
+    }
+  ],
+  "scenario_types_distribution": {
+    "offpeak": 2,
+    "peak": 2,
+    "rushsale": 2,
+    "fluctuating": 2
+  }
+}
