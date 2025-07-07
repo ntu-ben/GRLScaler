@@ -1,272 +1,289 @@
-# GRLScaler - Kubernetes 自動擴展三方法比較平台
+# 🚀 GRLScaler - 圖神經網路增強的 Kubernetes 自動擴展平台
 
-🚀 **完整的 Kubernetes 微服務自動擴展解決方案**，比較三種先進的自動擴展方法：
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-1.20+-blue.svg)](https://kubernetes.io/)
 
-- **🧠 GNNRL**: 圖神經網路強化學習 (Graph Neural Network + Reinforcement Learning)
-- **🎯 Gym-HPA**: 基礎強化學習 (Gymnasium + PPO)  
-- **⚖️ K8s-HPA**: 原生 Kubernetes HPA (Horizontal Pod Autoscaler)
+**GRLScaler** 是一個基於圖神經網路和強化學習的 Kubernetes 自動擴展研究平台，支援多種環境和自動擴展方法的性能比較。
 
-## 📋 目錄
+## 🎯 核心功能
 
-- [功能特色](#功能特色)
-- [系統架構](#系統架構)
-- [快速開始](#快速開始)
-- [實驗方法](#實驗方法)
-- [GNNRL 測試模式](#gnnrl-測試模式)
-- [結果分析](#結果分析)
-- [使用指南](#使用指南)
-- [開發文檔](#開發文檔)
+### 📊 支援的環境
+- **OnlineBoutique** - Google 微服務電商平台 (10個微服務)
+- **Redis** - 高性能內存數據庫 (Master-Slave 架構)
 
-## ✨ 功能特色
+### 🧠 支援的自動擴展方法
+1. **GNNRL** - 圖神經網路強化學習 (Graph Neural Network + Reinforcement Learning)
+2. **Gym-HPA** - 基礎強化學習 (Proximal Policy Optimization)
+3. **K8s-HPA** - Kubernetes 原生 Horizontal Pod Autoscaler
 
-### 🔬 三種自動擴展方法
-- **GNNRL**: 利用服務依賴圖進行智能擴展決策
-- **Gym-HPA**: 基於 PPO 算法的強化學習擴展  
-- **K8s-HPA**: 基於 CPU/Memory 閾值的傳統擴展
-
-### 📊 完整實驗平台
-- 統一的實驗管理器
-- 多負載模式測試（peak、off-peak、fluctuating、rush-sale）
-- 分散式 Locust 負載測試
-- 自動化實驗結果收集與分析
-
-### 🎯 智能實驗規劃
-- 自動檢測現有訓練模型
-- 用戶友好的選擇界面
-- 支援跳過特定實驗
-- 階段式執行（訓練、測試、分析）
-
-## 🏗️ 系統架構
-
-```
-GRLScaler/
-├── 🧠 gnnrl/                     # GNNRL 圖神經網路強化學習
-│   ├── core/envs/                # K8s 環境接口
-│   └── training/                 # 訓練與測試腳本
-├── 🎯 gym-hpa/                   # Gym-HPA 基礎強化學習  
-│   ├── gym_hpa/envs/            # Gymnasium 環境
-│   └── policies/                 # PPO 策略實現
-├── ⚖️ k8s_hpa/                   # K8s-HPA 原生擴展
-├── 🧪 loadtest/                  # 負載測試腳本
-├── 📊 logs/                      # 實驗數據與模型
-│   ├── models/                   # 訓練好的模型
-│   ├── gnnrl/                    # GNNRL 實驗結果
-│   ├── gym-hpa/                  # Gym-HPA 實驗結果
-│   └── k8s-hpa/                  # K8s-HPA 實驗結果
-└── 🔧 統一管理工具               # 實驗執行與分析
-```
+### 🔬 實驗特性
+- ✅ **標準化場景** - 8個固定種子場景確保公平比較
+- ✅ **多維度評估** - 吞吐量、響應時間、失敗率、資源效率
+- ✅ **實時監控** - Kiali、Prometheus、Istio 集成
+- ✅ **結果分析** - 自動生成性能報告和比較圖表
 
 ## 🚀 快速開始
 
-### 1. 環境準備
+### 前置需求
+
 ```bash
-# 確保 Kubernetes 集群運行
-kubectl get nodes
+# Kubernetes 集群 (推薦 1.20+)
+kubectl version
 
-# 部署 OnlineBoutique 微服務
-kubectl apply -f k8s-manifests/
+# Python 環境
+python --version  # 3.8+
 
-# 安裝依賴
+# 必要的 Python 套件
 pip install -r requirements.txt
 ```
 
-### 2. 一鍵運行完整實驗
+### 一鍵啟動實驗
+
 ```bash
-python run_complete_experiment.py
+# 1. 克隆項目
+git clone <repository-url>
+cd GRLScaler
+
+# 2. 部署測試環境
+kubectl apply -f MicroServiceBenchmark/  # OnlineBoutique
+kubectl apply -f MicroServiceBenchmark/redis-cluster/  # Redis
+
+# 3. 驗證環境
+python run_autoscaling_experiment.py onlineboutique --verify
+python run_autoscaling_experiment.py redis --verify
+
+# 4. 執行實驗
+python run_autoscaling_experiment.py onlineboutique --steps 5000
 ```
 
-### 3. 分析結果
+## 📋 詳細使用指南
+
+### OnlineBoutique 實驗
+
 ```bash
-python analyze_comprehensive.py
+# 完整三方法比較實驗 (推薦)
+python run_autoscaling_experiment.py onlineboutique --standardized --steps 5000
+
+# 只測試特定方法
+python run_autoscaling_experiment.py onlineboutique --method gnnrl --steps 3000
+python run_autoscaling_experiment.py onlineboutique --method gym-hpa --steps 3000
+python run_autoscaling_experiment.py onlineboutique --method k8s-hpa
+
+# 跳過特定階段
+python run_autoscaling_experiment.py onlineboutique --skip plan analysis --steps 3000
 ```
 
-## 🧪 實驗方法
+### Redis 實驗
 
-### 實驗階段
-1. **🎯 訓練階段**: 訓練 ML 模型（GNNRL、Gym-HPA）
-2. **🧪 測試階段**: 使用訓練好的模型進行性能評估
-3. **📊 分析階段**: 比較三種方法的性能指標
-
-### 負載模式
-- **Off-peak** (低負載): 50-100 用戶
-- **Peak** (高負載): 500 用戶  
-- **Fluctuating** (波動負載): 動態變化
-- **Rush Sale** (突發負載): 快速增長到高峰
-
-### 評估指標
-- **響應時間**: 平均、P95、P99
-- **吞吐量**: RPS (Requests Per Second)  
-- **穩定性**: 失敗率、抖動率
-- **資源效率**: CPU/Memory 利用率
-- **成本效益**: Pod-時間、資源浪費率
-
-## 🧠 GNNRL 測試模式
-
-### 📋 背景
-原始實現中 GNNRL 只有訓練數據，缺少測試階段數據，導致與其他方法的比較不公平。
-
-### ✅ 解決方案
-我們實現了完整的 GNNRL 測試模式：
-
-#### 1. 新增功能
-- ✅ `--testing` 模式支援
-- ✅ `--load-path` 模型載入  
-- ✅ 模型評估流程
-- ✅ 測試數據生成
-
-#### 2. 使用方式
-
-**方式 1: 直接測試**
 ```bash
-python run_gnnrl_test_mode.py
+# 完整 Redis 自動擴展實驗
+python run_autoscaling_experiment.py redis --steps 5000
+
+# 快速驗證環境
+python run_autoscaling_experiment.py redis --verify
+
+# 測試 HPA 配置
+python redis_hpa_test.py
 ```
 
-**方式 2: 完整實驗流程**
+### 進階選項
+
 ```bash
-python run_complete_experiment.py
-# 選擇使用現有 GNNRL 模型
+# 不同優化目標
+python run_autoscaling_experiment.py onlineboutique --goal latency  # 延遲優先
+python run_autoscaling_experiment.py onlineboutique --goal cost     # 成本優先
+
+# 不同 GNNRL 模型
+python run_autoscaling_experiment.py onlineboutique --model gat   # Graph Attention Network
+python run_autoscaling_experiment.py onlineboutique --model gcn   # Graph Convolutional Network
+python run_autoscaling_experiment.py onlineboutique --model sage  # GraphSAGE
+
+# 查看可用配置
+python run_autoscaling_experiment.py onlineboutique --list-configs
+python run_autoscaling_experiment.py redis --list-configs
 ```
 
-**方式 3: 手動執行**
+## 📊 實驗結果分析
+
+### 自動分析報告
+
+實驗完成後，系統會自動生成：
+
 ```bash
-python unified_experiment_manager.py \
-  --experiment gnnrl \
-  --testing \
-  --load-path logs/models/gnnrl_gat_latency_k8s_True_steps_5000.zip \
-  --k8s --goal latency --model gat --alg ppo
+# OnlineBoutique 結果
+logs/standardized_method_comparison.csv     # 三方法整體比較
+logs/standardized_scenario_comparison.csv  # 場景級別詳細比較
+STANDARDIZED_COMPARISON_REPORT.md          # 完整分析報告
+
+# Redis 結果
+logs/redis_hpa_comparison.csv              # Redis HPA 配置比較
+logs/redis_method_comparison.csv           # Redis 三方法比較
 ```
 
-#### 3. 效果
-現在可以進行公平比較：
-- **GNNRL**: 訓練數據 + 測試數據 ✅
-- **Gym-HPA**: 訓練數據 + 測試數據 ✅  
-- **K8s-HPA**: 測試數據 ✅
+### 手動分析
 
-## 📊 結果分析
-
-### 分析工具
 ```bash
-# 全面分析
-python analyze_comprehensive.py
+# 分析 OnlineBoutique 結果
+python analyze_onlineboutique_results.py
 
-# 基礎分析  
+# 分析一般結果
 python analyze_results.py
 
-# 額外指標分析
-python ADDITIONAL_METRICS_ANALYSIS.md
+# 啟動 TensorBoard
+tensorboard --logdir logs/
 ```
 
-### 主要發現
-基於最新實驗數據（僅測試階段）：
+## 🗂️ 項目結構
 
-| 方法 | 平均響應時間 | 失敗率 | 平均 RPS | P95 延遲 |
-|-----|-------------|-------|----------|----------|
-| **K8s-HPA** | **1,087.80ms** | **0.95%** | 127.93 | **1,776ms** |
-| **Gym-HPA** | 1,403.07ms | 2.50% | 74.12 | 2,268ms |
-| **GNNRL** | 📊 待測試 | 📊 待測試 | 📊 待測試 | 📊 待測試 |
+```
+GRLScaler/
+├── 📁 gnnrl/                           # GNNRL 圖神經網路強化學習
+│   ├── core/envs/                      # 環境實現 (OnlineBoutique, Redis)
+│   ├── training/                       # 訓練腳本
+│   └── data/                          # 數據集和圖結構
+├── 📁 gym-hpa/                        # Gym-HPA 基礎強化學習
+│   ├── gym_hpa/envs/                  # Gym 環境
+│   └── policies/                      # 策略實現
+├── 📁 macK8S/HPA/                     # K8s-HPA 配置
+│   ├── onlineboutique/                # OnlineBoutique HPA 配置
+│   └── redis/                         # Redis HPA 配置
+├── 📁 loadtest/                       # 負載測試腳本
+│   ├── onlineboutique/                # OnlineBoutique 測試場景
+│   └── redis/                         # Redis 測試場景
+├── 📁 logs/                           # 實驗結果和模型
+└── 📁 scripts/                        # 工具腳本
+    ├── run_autoscaling_experiment.py  # 🚀 主要入口腳本
+    ├── run_onlineboutique_experiment.py # OnlineBoutique 專用
+    ├── run_redis_experiment.py        # Redis 專用
+    ├── analyze_onlineboutique_results.py # 結果分析
+    ├── redis_hpa_test.py              # Redis HPA 測試
+    └── redis_environment_check.py     # Redis 環境檢查
+```
 
-> 📝 GNNRL 測試數據將在運行測試模式後可用
+## 🎯 核心腳本說明
 
-### 性能洞察
-1. **K8s-HPA** 在延遲一致性方面表現最佳
-2. **Gym-HPA** 在某些場景中響應時間優異
-3. **GNNRL** 在吞吐量方面具有潛力（基於訓練數據）
+| 腳本 | 用途 | 範例 |
+|------|------|------|
+| `run_autoscaling_experiment.py` | **統一入口** - 所有實驗的主要入口 | `python run_autoscaling_experiment.py onlineboutique --steps 5000` |
+| `run_onlineboutique_experiment.py` | OnlineBoutique 微服務實驗 | `python run_onlineboutique_experiment.py --standardized --steps 5000` |
+| `run_redis_experiment.py` | Redis 數據庫實驗 | `python run_redis_experiment.py --steps 5000` |
+| `analyze_onlineboutique_results.py` | OnlineBoutique 結果分析 | `python analyze_onlineboutique_results.py` |
+| `redis_hpa_test.py` | Redis HPA 配置測試 | `python redis_hpa_test.py` |
+| `redis_environment_check.py` | Redis 環境驗證 | `python redis_environment_check.py` |
 
-## 📚 使用指南
+## 📈 性能基準
 
-### 單一實驗執行
+### OnlineBoutique 實驗結果 (基於 8 個標準化場景)
+
+| 方法 | 平均 RPS | 平均響應時間 | 失敗率 | 綜合評分 |
+|------|----------|--------------|--------|----------|
+| **GNNRL** | **197.07** | **384.89ms** | **0.05%** | ⭐⭐⭐⭐⭐ |
+| **K8s-HPA (CPU-20%)** | 274.28 | 808.93ms | 0.81% | ⭐⭐⭐⭐ |
+| **Gym-HPA** | 179.93 | 514.94ms | 0.13% | ⭐⭐⭐ |
+
+### Redis 實驗結果
+
+| HPA 配置 | 場景支援 | 建議用途 |
+|----------|----------|----------|
+| **CPU-20%** | 高敏感度擴展 | 延遲敏感應用 |
+| **CPU-40%** | 平衡性能 | 一般生產環境 |
+| **CPU-80%** | 資源節約 | 成本敏感環境 |
+| **CPU+Memory** | 複合指標 | 複雜工作負載 |
+
+## 🔧 進階配置
+
+### 自定義 HPA 配置
+
 ```bash
-# GNNRL 訓練
-python unified_experiment_manager.py --experiment gnnrl --steps 5000
+# 生成新的 HPA 配置
+python macK8S/HPA/redis/generate_redis_hpa.py
 
-# GNNRL 測試  
-python unified_experiment_manager.py --experiment gnnrl --testing \
-  --load-path logs/models/gnnrl_gat_latency_k8s_True_steps_5000.zip
-
-# Gym-HPA 實驗
-python unified_experiment_manager.py --experiment gym_hpa --steps 5000
-
-# K8s-HPA 實驗
-python unified_experiment_manager.py --experiment k8s_hpa
+# 測試自定義配置
+python redis_hpa_test.py --config custom-cpu-30
 ```
 
-### 階段式執行
+### 自定義負載場景
+
+```python
+# 在 loadtest/ 目錄下創建新場景
+# 參考現有的 locust_*.py 文件
+```
+
+### 環境變數配置
+
 ```bash
-# 只執行訓練階段
-python run_complete_experiment.py --stage training
-
-# 只執行測試階段  
-python run_complete_experiment.py --stage testing
-
-# 只執行分析階段
-python run_complete_experiment.py --stage analysis
+export M1_HOST="http://your-loadtest-agent:8000"  # 分散式測試
+export KIALI_URL="http://your-kiali:20001"        # Kiali 監控
+export PROMETHEUS_URL="http://your-prometheus:9090" # Prometheus 監控
 ```
 
-### 自定義配置
+## 🐛 問題排除
+
+### 常見問題
+
+1. **Kubernetes 連接失敗**
+   ```bash
+   kubectl cluster-info
+   kubectl get nodes
+   ```
+
+2. **服務未就緒**
+   ```bash
+   kubectl get pods -n onlineboutique
+   kubectl get pods -n redis
+   ```
+
+3. **分散式測試失敗**
+   ```bash
+   # 檢查測試代理
+   curl $M1_HOST
+   ```
+
+4. **HPA 不生效**
+   ```bash
+   kubectl get hpa -A
+   kubectl describe hpa -n <namespace>
+   ```
+
+### 日誌檢查
+
 ```bash
-# 自定義步數和目標
-python run_complete_experiment.py --steps 10000 --goal cost
+# 檢查實驗日誌
+tail -f logs/*/latest_experiment.log
 
-# 跳過特定實驗
-python run_complete_experiment.py --skip-stages gnnrl,gym_hpa
+# 檢查 Pod 日誌
+kubectl logs -n onlineboutique deployment/frontend
+kubectl logs -n redis deployment/redis-master
 ```
-
-## 📖 開發文檔
-
-### 核心檔案
-- **`run_complete_experiment.py`**: 主要實驗執行器
-- **`unified_experiment_manager.py`**: 統一實驗管理器  
-- **`experiment_planner.py`**: 智能實驗規劃器
-- **`analyze_comprehensive.py`**: 全面結果分析器
-
-### 實驗數據結構
-```
-logs/
-├── models/                           # 訓練好的模型
-│   ├── gnnrl_gat_latency_k8s_True_steps_5000.zip
-│   └── ppo_env_online_boutique_gym_goal_latency_k8s_True_totalSteps_5000.zip
-├── gnnrl/
-│   ├── gnnrl_train_seed42_*/        # 訓練數據
-│   └── gnnrl_test_seed42_*/         # 測試數據 🆕
-├── gym-hpa/
-│   ├── gym_hpa_train_seed42_*/      # 訓練數據  
-│   └── gym_hpa_test_seed42_*/       # 測試數據
-└── k8s-hpa/
-    └── k8s_hpa_cpu_seed42_*/        # 測試數據
-```
-
-### 配置文件
-- **`experiment_config.yaml`**: 實驗參數配置
-- **`CLAUDE.md`**: Claude AI 使用說明
-- **各種分析報告**: `*_ANALYSIS_*.md`
 
 ## 🤝 貢獻指南
 
-1. Fork 此專案
+1. Fork 項目
 2. 創建功能分支 (`git checkout -b feature/amazing-feature`)
 3. 提交更改 (`git commit -m 'Add amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)  
-5. 開啟 Pull Request
+4. 推送分支 (`git push origin feature/amazing-feature`)
+5. 創建 Pull Request
 
-## 📄 授權條款
+## 📜 授權條款
 
-本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
+本項目採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 文件
 
 ## 🙏 致謝
 
-- **Kubernetes 社群** - 提供強大的容器編排平台
-- **Stable Baselines3** - 優秀的強化學習框架
-- **Locust** - 靈活的負載測試工具
-- **OnlineBoutique** - Google 提供的微服務範例應用
+- **Google Cloud** - OnlineBoutique 微服務範例
+- **Kubernetes** - 容器編排平台
+- **Istio** - 服務網格
+- **PyTorch Geometric** - 圖神經網路庫
+- **OpenAI Gym** - 強化學習環境
+
+## 📧 聯絡資訊
+
+如有問題或建議，請透過以下方式聯絡：
+- 📧 Email: [your-email@example.com]
+- 🐛 Issues: [GitHub Issues](https://github.com/your-repo/GRLScaler/issues)
+- 📖 文檔: [項目 Wiki](https://github.com/your-repo/GRLScaler/wiki)
 
 ---
 
-📊 **準備好開始你的 Kubernetes 自動擴展實驗了嗎？**
-
-```bash
-git clone <repository-url>
-cd GRLScaler  
-python run_complete_experiment.py
-```
-
-🎯 **讓數據說話，找出最適合你的自動擴展策略！**
+**⭐ 如果這個項目對你有幫助，請給我們一個 Star！**

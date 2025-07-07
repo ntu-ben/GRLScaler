@@ -58,6 +58,16 @@ def _get_default_service_graph(namespace: str):
         ]
         
         return services, edge_list
+    elif namespace == "redis":
+        # Default Redis master-slave topology
+        services = ["redis-master", "redis-slave"]
+        
+        # Redis master-slave connection: master -> slave (replication)
+        edge_list = [
+            (0, 1),  # redis-master -> redis-slave (replication)
+        ]
+        
+        return services, edge_list
     else:
         # Default for other namespaces
         return ["service1", "service2", "service3"], [(0, 1), (1, 2)]
@@ -515,15 +525,50 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.patch_deployment(new_replicas)
 
     def patch_deployment(self, new_replicas):
-        try:
-            self.apps_v1.patch_namespaced_deployment(
-                name=self.name, namespace=self.namespace, body=self.deployment_object
-            )
-        except Exception as e:
-            print(e)
-            print("Retrying in {}s...".format(self.sleep))
-            time.sleep(self.sleep)
-            return self.update_deployment(new_replicas)
+        max_retries = 5  # 增加重試次數
+        base_delay = 0.5  # 基礎延遲
+        
+        for attempt in range(max_retries):
+            try:
+                # 重新讀取最新的 deployment 物件以避免版本衝突
+                current_deployment = self.apps_v1.read_namespaced_deployment(
+                    name=self.name, namespace=self.namespace
+                )
+                
+                # 如果 replica 數量已經是目標值，直接返回成功
+                if current_deployment.spec.replicas == new_replicas:
+                    print(f"Deployment {self.name} already has {new_replicas} replicas")
+                    self.deployment_object = current_deployment
+                    return True
+                
+                # 更新 replica 數量
+                current_deployment.spec.replicas = new_replicas
+                
+                self.apps_v1.patch_namespaced_deployment(
+                    name=self.name, namespace=self.namespace, body=current_deployment
+                )
+                # 成功則更新本地物件
+                self.deployment_object = current_deployment
+                print(f"Successfully updated {self.name} to {new_replicas} replicas")
+                return True
+                
+            except Exception as e:
+                error_msg = str(e)
+                print(f"(Attempt {attempt + 1}/{max_retries}) {error_msg}")
+                
+                # 如果不是衝突錯誤，立即失敗
+                if "409" not in error_msg and "Conflict" not in error_msg:
+                    print(f"Non-conflict error, aborting: {error_msg}")
+                    return False
+                
+                if attempt < max_retries - 1:
+                    # 指數退避: 0.5s, 1s, 2s, 4s
+                    delay = base_delay * (2 ** attempt)
+                    print(f"Retrying in {delay}s...")
+                    time.sleep(delay)
+                else:
+                    print(f"Failed to update deployment after {max_retries} attempts")
+                    return False
 
     def deploy_pod_replicas(self, n, env):
         # Deploy pods if possible

@@ -242,22 +242,28 @@ class Redis(gym.Env):
             save_to_csv(self.file_results, self.episode_count, mean(self.avg_pods), mean(self.avg_latency),
                         self.total_reward, self.execution_time)
 
-        # return ob, reward, self.episode_over, self.info
+        # return ob, reward, terminated, truncated, self.info
+        terminated = self.episode_over
+        truncated = False  # Add support for truncation if needed later
         if self.use_graph:
-            return ob, reward, self.episode_over, self.info
-        return np.array(ob), reward, self.episode_over, self.info
+            return ob, reward, terminated, truncated, self.info
+        return np.array(ob), reward, terminated, truncated, self.info
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """
         Reset the state of the environment and returns an initial observation.
         Returns
         -------
         observation (object): the initial observation of the space.
+        info (dict): auxiliary information
         """
+        if seed is not None:
+            self.seed(seed)
+            
         self.current_step = 0
         self.episode_over = False
         self.total_reward = 0
@@ -272,8 +278,8 @@ class Redis(gym.Env):
 
         state = self.get_state()
         if self.use_graph:
-            return state
-        return np.array(state)
+            return state, {}
+        return np.array(state), {}
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen

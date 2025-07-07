@@ -53,6 +53,10 @@ class UnifiedExperimentManager:
         self._setup_locust_scenarios()
         self._setup_hpa_configurations()
         
+        # 初始化 timestamp 屬性
+        from datetime import datetime
+        self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
     def _setup_locust_scenarios(self):
         """設定 Locust 測試場景"""
         self.scenarios = {
@@ -68,6 +72,7 @@ class UnifiedExperimentManager:
         self.m1_host = os.getenv("M1_HOST")
         self.kiali_url = os.getenv("KIALI_URL", "http://localhost:20001/kiali")
         self.namespace = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
+        self.redis_namespace = os.getenv("NAMESPACE_REDIS", "redis")
         
         # 計算運行時間（秒）
         self._parse_run_time()
@@ -97,8 +102,14 @@ class UnifiedExperimentManager:
             ]
         }
         
+        # Redis HPA 配置 (簡化為只測試 CPU)
+        self.redis_hpa_configs = {
+            'cpu': ['cpu-20', 'cpu-40', 'cpu-60', 'cpu-80']
+        }
+        
         # HPA 配置根目錄
         self.hpa_root = self.repo_root / "macK8S" / "HPA" / "onlineboutique"
+        self.redis_hpa_root = self.repo_root / "macK8S" / "HPA" / "redis"
         
     def _load_config(self, config_path: Path) -> dict:
         """載入實驗配置檔案"""
@@ -110,7 +121,14 @@ class UnifiedExperimentManager:
     
     def _setup_logging(self) -> logging.Logger:
         """設定日誌系統"""
-        log_file = os.getenv('UNIFIED_EXPERIMENT_LOG', 'unified_experiment.log')
+        # 確保 runtime 目錄存在
+        runtime_dir = Path("logs/runtime")
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 使用時間戳創建唯一的日誌文件
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = runtime_dir / f"unified_experiment_{timestamp}.log"
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -144,12 +162,12 @@ class UnifiedExperimentManager:
                     key, value = line.split('=', 1)
                     os.environ[key] = value
     
-    def validate_environment(self) -> bool:
+    def validate_environment(self, use_case: str = "online_boutique") -> bool:
         """驗證實驗環境"""
         self.logger.info("🔍 驗證實驗環境...")
         
         # 檢查 Kubernetes 環境
-        if not self._check_k8s_environment():
+        if not self._check_k8s_environment(use_case):
             return False
         
         # 檢查分散式測試環境
@@ -163,25 +181,47 @@ class UnifiedExperimentManager:
         self.logger.info("✅ 環境驗證通過")
         return True
     
-    def _check_k8s_environment(self) -> bool:
+    def _check_k8s_environment(self, use_case: str = "online_boutique") -> bool:
         """檢查 Kubernetes 環境"""
         try:
             # 檢查 kubectl 命令
             subprocess.run(['kubectl', 'version', '--client'], 
                          capture_output=True, check=True)
             
-            # 檢查 onlineboutique namespace
+            # 根據 use_case 選擇要檢查的 namespace 和期望的 Pod 數量
+            if use_case == "redis":
+                namespace = self.redis_namespace
+                min_pods = 2  # redis-master, redis-slave (redis-exporter 是可選的)
+                env_name = "Redis"
+            else:
+                namespace = self.namespace
+                min_pods = 10  # OnlineBoutique 的 10 個微服務
+                env_name = "OnlineBoutique"
+            
+            # 檢查指定 namespace 的 Pod
             result = subprocess.run(
-                ['kubectl', 'get', 'pods', '-n', 'onlineboutique', '--no-headers'],
+                ['kubectl', 'get', 'pods', '-n', namespace, '--no-headers'],
                 capture_output=True, text=True, check=True
             )
             
-            running_pods = [p for p in result.stdout.strip().split('\n') if 'Running' in p]
-            if len(running_pods) < 10:
-                self.logger.error(f"❌ OnlineBoutique 環境不完整，僅 {len(running_pods)} 個 Pod 運行")
+            if not result.stdout.strip():
+                self.logger.error(f"❌ {env_name} namespace ({namespace}) 中沒有 Pod")
                 return False
             
-            self.logger.info(f"✅ Kubernetes 環境正常，{len(running_pods)} 個服務運行中")
+            running_pods = [p for p in result.stdout.strip().split('\n') if 'Running' in p]
+            
+            # 對於 Redis，只檢查核心服務
+            if use_case == "redis":
+                core_pods = [p for p in running_pods if 'redis-master' in p or 'redis-slave' in p]
+                if len(core_pods) < min_pods:
+                    self.logger.error(f"❌ {env_name} 核心服務不完整，僅 {len(core_pods)} 個核心 Pod 運行")
+                    return False
+            else:
+                if len(running_pods) < min_pods:
+                    self.logger.error(f"❌ {env_name} 環境不完整，僅 {len(running_pods)} 個 Pod 運行")
+                    return False
+            
+            self.logger.info(f"✅ {env_name} 環境正常，{len(running_pods)} 個服務運行中")
             return True
             
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
@@ -319,9 +359,11 @@ class UnifiedExperimentManager:
         use_case = kwargs.get('use_case', 'online_boutique')
         self.logger.info(f"🧠 執行 GNNRL 實驗 (應用場景: {use_case})")
         
-        # 檢查 GNNRL 是否支持指定的 use case
+        # GNNRL 支持兩種環境
         if use_case == 'redis':
-            self.logger.warning("⚠️ GNNRL 目前主要針對 OnlineBoutique 優化，Redis 支持可能有限")
+            self.logger.info("📊 GNNRL Redis 環境實驗")
+        else:
+            self.logger.info("📊 GNNRL OnlineBoutique 環境實驗")
         
         # 直接調用 GNNRL 腳本
         gnnrl_script = self.repo_root / "gnnrl" / "training" / "run_gnnrl_experiment.py"
@@ -332,7 +374,8 @@ class UnifiedExperimentManager:
             "--goal", str(kwargs.get('goal', 'latency')),
             "--alg", str(kwargs.get('alg', 'ppo')),
             "--model", str(kwargs.get('model', 'gat')),
-            "--env-step-interval", str(kwargs.get('env_step_interval', 15.0))
+            "--env-step-interval", str(kwargs.get('env_step_interval', 15.0)),
+            "--use-case", str(use_case)
         ]
         
         if kwargs.get('k8s', False):
@@ -358,6 +401,10 @@ class UnifiedExperimentManager:
             # 測試模式：執行測試腳本後進行負載測試
             training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
             self.logger.info(f"🔄 GNNRL 測試進程已開始...")
+            
+            # 等待測試完成後再執行負載測試
+            training_proc.wait()
+            training_proc = None  # 設為 None 以執行單次負載測試
         else:
             # 訓練模式：啟動 GNNRL 訓練進程
             self.logger.info("🎯 使用訓練模式")
@@ -423,8 +470,12 @@ class UnifiedExperimentManager:
         try:
             resp = requests.get(url, timeout=10)
             resp.raise_for_status()
-            Path(f"kiali_{stage}.json").write_text(resp.text, encoding="utf-8")
-            self.logger.info(f"✅ Kiali 圖表已保存: kiali_{stage}.json")
+            # 確保 kiali 目錄存在
+            kiali_dir = Path("logs/kiali")
+            kiali_dir.mkdir(parents=True, exist_ok=True)
+            kiali_file = kiali_dir / f"kiali_{stage}_{self.timestamp}.json"
+            kiali_file.write_text(resp.text, encoding="utf-8")
+            self.logger.info(f"✅ Kiali 圖表已保存: {kiali_file}")
         except Exception as err:
             self.logger.warning(f"⚠️ Kiali 圖表記錄失敗: {err}")
 
@@ -504,13 +555,22 @@ class UnifiedExperimentManager:
             return self._run_local_locust(scenario, out_dir)
     
     def _run_local_locust(self, scenario: str, out_dir: Path) -> bool:
-        """運行本地 Locust 測試"""
-        script_path = self.repo_root / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+        """運行本地 Locust 測試 - 支持兩種環境"""
+        # 檢查環境類型
+        environment = 'onlineboutique' if self.namespace == 'onlineboutique' else 'redis'
+        
+        # 優先嘗試環境專用腳本
+        script_path = self.repo_root / "loadtest" / environment / f"locust_{scenario}.py"
+        
+        # 如果環境專用腳本不存在，嘗試OnlineBoutique通用腳本
+        if not script_path.exists():
+            script_path = self.repo_root / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+            
         if not script_path.exists():
             self.logger.error(f"❌ 測試腳本不存在: {script_path}")
             return False
             
-        self.logger.info(f"🏠 運行本地 Locust {scenario}")
+        self.logger.info(f"🏠 運行本地 Locust {scenario} (環境: {environment})")
         cmd = [
             "locust", "-f", str(script_path), "--headless", "--run-time", self.locust_run_time,
             "--host", self.target_host,
@@ -902,6 +962,8 @@ def main():
                        help='僅驗證環境')
     parser.add_argument('--loadtest-only', action='store_true',
                        help='僅執行負載測試')
+    parser.add_argument('--enable-loadtest', action='store_true',
+                       help='強制啟用負載測試（適用於測試模式）')
     parser.add_argument('--compare', nargs='+',
                        help='比較實驗結果路徑')
     
@@ -911,7 +973,7 @@ def main():
     manager = UnifiedExperimentManager()
     
     # 環境驗證
-    if not manager.validate_environment():
+    if not manager.validate_environment(args.use_case):
         if not args.validate_only:
             sys.exit(1)
         else:

@@ -1,5 +1,6 @@
 import logging
 import argparse
+from pathlib import Path
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
 from sb3_contrib import RecurrentPPO
@@ -11,7 +12,11 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 # Logging
 from gnnrl.core.util.util import test_model
 
-logging.basicConfig(filename='run.log', filemode='w', level=logging.INFO)
+# 確保 logs 目錄存在
+logs_dir = Path("logs/gnnrl")
+logs_dir.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(filename=str(logs_dir / 'run.log'), filemode='w', level=logging.INFO)
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 parser = argparse.ArgumentParser(description='Run ILP!')

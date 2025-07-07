@@ -3,6 +3,7 @@ import datetime
 import logging
 import time
 from statistics import mean
+from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
@@ -135,8 +136,11 @@ class Redis(gym.Env):
         
         # Only load CSV data in simulation mode
         if not self.k8s:
-            self.df = pd.read_csv("../../datasets/real/" + self.deploymentList[0].namespace + "/v1/"
-                                  + self.name + '_' + 'observation.csv')
+            # Use correct path relative to project root
+            dataset_path = (Path(__file__).parent.parent.parent.parent / 
+                          "gnnrl/data/datasets/real/redis/v1/redis_gym_observation.csv")
+            print(f"[INFO] Loading dataset from: {dataset_path}")
+            self.df = pd.read_csv(dataset_path)
         else:
             self.df = None  # K8s mode doesn't use CSV data
 
@@ -485,22 +489,19 @@ class Redis(gym.Env):
             writer = csv.DictWriter(file, fieldnames=fields)
             # writer.writeheader() # write header
 
-            writer.writerow(
-                {'date': date,
-                 'redis-leader_num_pods': int("{}".format(obs[0])),
-                 'redis-leader_desired_replicas': int("{}".format(obs[1])),
-                 'redis-leader_cpu_usage': int("{}".format(obs[2])),
-                 'redis-leader_mem_usage': int("{}".format(obs[3])),
-                 'redis-leader_traffic_in': int("{}".format(obs[4])),
-                 'redis-leader_traffic_out': int("{}".format(obs[5])),
-                 'redis-leader_latency': float("{:.3f}".format(latency)),
-                 'redis-follower_num_pods': int("{}".format(obs[6])),
-                 'redis-follower_desired_replicas': int("{}".format(obs[7])),
-                 'redis-follower_cpu_usage': int("{}".format(obs[8])),
-                 'redis-follower_mem_usage': int("{}".format(obs[9])),
-                 'redis-follower_traffic_in': int("{}".format(obs[10])),
-                 'redis-follower_traffic_out': int("{}".format(obs[11])),
-                 'redis-follower_latency': float("{:.3f}".format(latency))
-                 }
-            )
+            # 動態生成 CSV 行數據
+            row_data = {'date': date}
+            obs_index = 0
+            
+            for i, d in enumerate(self.deploymentList):
+                row_data[d.name + '_num_pods'] = int("{}".format(obs[obs_index]))
+                row_data[d.name + '_desired_replicas'] = int("{}".format(obs[obs_index + 1]))
+                row_data[d.name + '_cpu_usage'] = int("{}".format(obs[obs_index + 2]))
+                row_data[d.name + '_mem_usage'] = int("{}".format(obs[obs_index + 3]))
+                row_data[d.name + '_traffic_in'] = int("{}".format(obs[obs_index + 4]))
+                row_data[d.name + '_traffic_out'] = int("{}".format(obs[obs_index + 5]))
+                row_data[d.name + '_latency'] = float("{:.3f}".format(latency))
+                obs_index += 6
+            
+            writer.writerow(row_data)
         return

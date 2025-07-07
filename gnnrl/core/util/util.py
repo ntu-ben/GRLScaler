@@ -1,5 +1,6 @@
 import pandas as pd
 from matplotlib import pyplot as plt
+from pathlib import Path
 
 
 def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
@@ -32,4 +33,13 @@ def test_model(model, env, n_episodes, n_steps, smoothing_window, fig_name):
     plt.plot(rewards_smoothed)
     plt.xlabel("Episode")
     plt.ylabel("Reward")
-    plt.savefig(fig_name, dpi=250, bbox_inches='tight')
+    
+    # 確保圖片保存到 logs/gnnrl/charts/ 目錄
+    charts_dir = Path("logs/gnnrl/charts")
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 從 fig_name 中提取文件名
+    fig_path = Path(fig_name)
+    chart_file = charts_dir / fig_path.name
+    
+    plt.savefig(chart_file, dpi=250, bbox_inches='tight')

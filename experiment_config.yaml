@@ -17,6 +17,20 @@ experiments:
       total_steps: 5000
     supports_distributed_testing: true
     
+  gym_hpa_redis:
+    name: "Redis 強化學習 (Gym-HPA)"
+    description: "Redis 環境的標準強化學習自動擴展"
+    script_path: "gym-hpa/policies/run/run.py"
+    default_args:
+      alg: "ppo"
+      use_case: "redis"
+      goal: "latency"
+      k8s: true
+      training: true
+      steps: 500
+      total_steps: 5000
+    supports_distributed_testing: true
+    
   k8s_hpa:
     name: "Kubernetes HPA 基準測試"
     description: "原生 Kubernetes HPA 基準性能測試"
@@ -35,6 +49,20 @@ experiments:
       model: "gat"
       goal: "latency"
       embed_dim: 32
+    supports_distributed_testing: true
+    advanced: true
+    
+  gnnrl_redis:
+    name: "Redis 圖神經網路強化學習 (GNNRL)"
+    description: "Redis 環境的 GNN-RL 自動擴展"
+    script_path: "gnnrl/training/run_gnnrl_experiment.py"
+    default_args:
+      k8s: true
+      steps: 5000
+      model: "gat"
+      goal: "latency"
+      embed_dim: 32
+      use_case: "redis"
     supports_distributed_testing: true
     advanced: true
 

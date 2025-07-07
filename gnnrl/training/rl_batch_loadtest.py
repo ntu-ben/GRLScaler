@@ -24,6 +24,7 @@ rl_batch_loadtest.py  v5.0  (2025-06-23)
 
 from __future__ import annotations
 import os, sys, logging, subprocess, time, datetime as dt, traceback, argparse, random
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict
 
@@ -106,8 +107,13 @@ def record_kiali_graph(stage: str) -> None:
     try:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
-        Path(f"kiali_{stage}.json").write_text(resp.text, encoding="utf-8")
-        logging.info("✅ Kiali graph saved: kiali_%s.json", stage)
+        # 確保 kiali 目錄存在
+        kiali_dir = Path("logs/kiali")
+        kiali_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        kiali_file = kiali_dir / f"kiali_{stage}_{timestamp}.json"
+        kiali_file.write_text(resp.text, encoding="utf-8")
+        logging.info("✅ Kiali graph saved: %s", kiali_file)
     except Exception as err:
         logging.warning("kiali graph failed: %s", err)
 

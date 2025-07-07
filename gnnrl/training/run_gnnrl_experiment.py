@@ -124,24 +124,35 @@ def load_env_vars():
     else:
         logger.info("No .env file found, using defaults")
 
-def validate_k8s_environment():
+def validate_k8s_environment(use_case='online_boutique'):
     """Validate that the K8s environment is properly set up."""
     import subprocess
     
     try:
-        # Check if onlineboutique namespace exists and has pods
+        if use_case == 'redis':
+            # Check Redis environment
+            namespace = 'redis'
+            min_pods = 2  # redis-master, redis-slave
+            env_name = 'Redis'
+        else:
+            # Check OnlineBoutique environment
+            namespace = 'onlineboutique'
+            min_pods = 10  # OnlineBoutique has 11 services
+            env_name = 'OnlineBoutique'
+        
+        # Check if namespace exists and has pods
         result = subprocess.run(
-            ['kubectl', 'get', 'pods', '-n', 'onlineboutique', '--no-headers'],
+            ['kubectl', 'get', 'pods', '-n', namespace, '--no-headers'],
             capture_output=True, text=True, check=True
         )
         pods = result.stdout.strip().split('\n')
         running_pods = [p for p in pods if 'Running' in p]
         
-        if len(running_pods) < 10:  # OnlineBoutique has 11 services
-            logger.warning(f"Only {len(running_pods)} pods running in onlineboutique namespace")
+        if len(running_pods) < min_pods:
+            logger.warning(f"Only {len(running_pods)} pods running in {namespace} namespace")
             return False
             
-        logger.info(f"✓ OnlineBoutique environment ready: {len(running_pods)} pods running")
+        logger.info(f"✓ {env_name} environment ready: {len(running_pods)} pods running")
         
         # Check if Prometheus and Kiali are running
         result = subprocess.run(
@@ -187,6 +198,11 @@ def parse_args():
     parser.add_argument(
         '--goal', choices=['latency', 'cost'], default='latency',
         help='Optimization goal (default: latency)'
+    )
+    
+    parser.add_argument(
+        '--use-case', choices=['online_boutique', 'redis'], default='online_boutique',
+        help='Use case environment (default: online_boutique)'
     )
     
     parser.add_argument(
@@ -244,39 +260,66 @@ def parse_args():
 
 def create_environment(args):
     """Create and validate the training environment."""
-    logger.info("Creating OnlineBoutique environment...")
     
-    # Determine dataset path
-    if not args.k8s and not os.path.exists(args.dataset_path):
-        # Try relative to project root
-        dataset_path = Path(__file__).parent.parent.parent / args.dataset_path
-        if dataset_path.exists():
-            args.dataset_path = str(dataset_path)
+    if args.use_case == 'redis':
+        logger.info("Creating Redis environment...")
+        
+        # Redis-specific dataset path
+        if not args.k8s:
+            redis_dataset_path = (Path(__file__).parent.parent 
+                                / "data/datasets/real/redis/v1/redis_gym_observation.csv")
+            if not redis_dataset_path.exists():
+                logger.error(f"Redis dataset not found: {redis_dataset_path}")
+                return None
+            dataset_path = str(redis_dataset_path)
         else:
-            logger.error(f"Dataset not found: {args.dataset_path}")
+            dataset_path = None
+        
+        try:
+            from gnnrl.core.envs import Redis
+            env = Redis(
+                k8s=args.k8s,
+                goal_reward=args.goal,
+                use_graph=True,  # Enable GNN mode
+                dataset_path=dataset_path,
+                waiting_period=args.env_step_interval
+            )
+        except Exception as e:
+            logger.error(f"Failed to create Redis environment: {e}")
+            return None
+    else:
+        logger.info("Creating OnlineBoutique environment...")
+        
+        # Determine dataset path
+        if not args.k8s and not os.path.exists(args.dataset_path):
+            # Try relative to project root
+            dataset_path = Path(__file__).parent.parent.parent / args.dataset_path
+            if dataset_path.exists():
+                args.dataset_path = str(dataset_path)
+            else:
+                logger.error(f"Dataset not found: {args.dataset_path}")
+                return None
+        
+        try:
+            env = OnlineBoutique(
+                k8s=args.k8s,
+                goal_reward=args.goal,
+                use_graph=True,  # Enable GNN mode
+                dataset_path=args.dataset_path if not args.k8s else None,
+                waiting_period=args.env_step_interval
+            )
+        except Exception as e:
+            logger.error(f"Failed to create environment: {e}")
             return None
     
-    try:
-        env = OnlineBoutique(
-            k8s=args.k8s,
-            goal_reward=args.goal,
-            use_graph=True,  # Enable GNN mode
-            dataset_path=args.dataset_path if not args.k8s else None,
-            waiting_period=args.env_step_interval
-        )
-        
-        logger.info("✓ Environment created successfully")
-        
-        # Validate environment
-        logger.info("Validating environment...")
-        check_env(env)
-        logger.info("✓ Environment validation passed")
-        
-        return env
-        
-    except Exception as e:
-        logger.error(f"Failed to create environment: {e}")
-        return None
+    logger.info("✓ Environment created successfully")
+    
+    # Validate environment
+    logger.info("Validating environment...")
+    check_env(env)
+    logger.info("✓ Environment validation passed")
+    
+    return env
 
 def create_model(env, args):
     """Create the GNNRL model."""
@@ -290,15 +333,16 @@ def create_model(env, args):
             [('svc', 'calls', 'svc')]  # edge types - only service-to-service calls
         )
         
-        # Setup tensorboard logging - use absolute path - 統一到 logs 目錄
+        # Setup tensorboard logging - 支持兩種環境
         scenario = 'real' if args.k8s else 'simulated'
+        environment = args.use_case if hasattr(args, 'use_case') else 'online_boutique'
         tensorboard_log = None
         if not args.no_tensorboard:
-            # 使用絕對路徑，基於專案根目錄 - 統一到 logs 目錄
-            results_dir = Path(__file__).parent.parent.parent / "logs" / "gnnrl" / "tensorboard" / "online_boutique" / scenario / args.goal
+            # 根據環境設定不同的TensorBoard路徑
+            results_dir = Path(__file__).parent.parent.parent / "logs" / "gnnrl" / "tensorboard" / environment / scenario / args.goal
             results_dir.mkdir(parents=True, exist_ok=True)
             tensorboard_log = str(results_dir)
-            logger.info(f"Tensorboard logging enabled: {tensorboard_log}")
+            logger.info(f"Tensorboard logging enabled for {environment}: {tensorboard_log}")
         else:
             logger.info("Tensorboard logging disabled")
         
@@ -369,7 +413,7 @@ def run_experiment(args):
     # Validate K8s environment if needed
     if args.k8s:
         logger.info("Validating K8s environment...")
-        if not validate_k8s_environment():
+        if not validate_k8s_environment(args.use_case):
             logger.error("❌ K8s environment validation failed")
             return False
         logger.info("✓ K8s environment validation passed")
