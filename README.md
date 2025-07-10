@@ -287,3 +287,11 @@ kubectl logs -n redis deployment/redis-master
 ---
 
 **⭐ 如果這個項目對你有幫助，請給我們一個 Star！**
+
+## GPU Memory Usage
+
+Below screenshot compares VRAM consumption of the new Temporal Graph Network (TGN)
+encoder with the previous GAT model. TGN requires about 20% of the memory
+footprint of ST-GNN.
+
+![nvidia-smi](docs/tgn_vs_gat_vram.png)

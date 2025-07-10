@@ -45,6 +45,7 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, BaseCallback
 
 from gnnrl.core.envs import OnlineBoutique
+from gnnrl.core.agents.ppo_gnn import GNNPPOPolicy
 from stable_baselines3.common.policies import ActorCriticPolicy
 
 class DetailedLoggingCallback(BaseCallback):
@@ -191,7 +192,7 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--model', choices=['gat', 'gcn'], default='gat',
+        '--model', choices=['gat', 'gcn', 'tgn'], default='gat',
         help='GNN model type (default: gat)'
     )
     
@@ -228,6 +229,16 @@ def parse_args():
     parser.add_argument(
         '--env-step-interval', type=float, default=15.0,
         help='Environment step interval in seconds (default: 15.0)'
+    )
+
+    parser.add_argument(
+        '--damping', type=float, default=0.7,
+        help='Damping factor for replica changes (default: 0.7)'
+    )
+
+    parser.add_argument(
+        '--hyst', type=int, default=2,
+        help='Hysteresis threshold for replica changes (default: 2)'
     )
     
     parser.add_argument(
@@ -346,10 +357,17 @@ def create_model(env, args):
         else:
             logger.info("Tensorboard logging disabled")
         
-        # Create RL model with MultiInput policy for Dict observation space
+        # Use custom GNN policy
+        policy_kwargs = {
+            'metadata': metadata,
+            'model': args.model,
+            'embed_dim': args.embed_dim,
+        }
+        policy_cls = GNNPPOPolicy
+
         if args.alg == 'a2c':
             model = A2C(
-                policy="MultiInputPolicy",
+                policy_cls,
                 env=env,
                 learning_rate=3e-4,
                 n_steps=5,
@@ -360,11 +378,11 @@ def create_model(env, args):
                 max_grad_norm=0.5,
                 verbose=1,
                 tensorboard_log=tensorboard_log,
-                policy_kwargs={}
+                policy_kwargs=policy_kwargs,
             )
         else:  # default to PPO
             model = PPO(
-                policy="MultiInputPolicy",
+                policy_cls,
                 env=env,
                 learning_rate=3e-4,
                 n_steps=256,
@@ -378,7 +396,7 @@ def create_model(env, args):
                 max_grad_norm=0.5,
                 verbose=1,
                 tensorboard_log=tensorboard_log,
-                policy_kwargs={}
+                policy_kwargs=policy_kwargs,
             )
         
         logger.info("✓ GNNRL model created successfully")

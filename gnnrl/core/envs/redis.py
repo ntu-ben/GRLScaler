@@ -67,7 +67,7 @@ class Redis(gym.Env):
     """Horizontal Scaling for Redis in Kubernetes - an OpenAI gym environment"""
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward=COST, waiting_period=0.3, use_graph=False, dataset_path=None):
+    def __init__(self, k8s=False, goal_reward=COST, waiting_period=5.0, use_graph=False, dataset_path=None):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -89,12 +89,9 @@ class Redis(gym.Env):
         # Actions identified by integers 0-n -> 15 actions!
         self.num_actions = 15
 
-        # Multi-Discrete version
-        # Deployment: Discrete 2 - Master[0], Slave[1]
-        # Action: Discrete 9 - None[0], Add-1[1], Add-2[2], Add-3[3], Add-4[4],
-        #                      Stop-1[5], Stop-2[6], Stop-3[7], Stop-4[8]
-
-        self.action_space = spaces.MultiDiscrete([2, self.num_actions])
+        # Multi-Discrete - output action for each service simultaneously
+        num_services = len(DEPLOYMENTS)
+        self.action_space = spaces.MultiDiscrete([self.num_actions] * num_services)
 
         # Observations: 22 Metrics! -> 2 * 11 = 22
         # "number_pods"                     -> Number of deployed Pods
@@ -120,7 +117,13 @@ class Redis(gym.Env):
             node_feat_dim = 6
             node_feat_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_nodes, node_feat_dim), dtype=np.float32)
             adj_space = spaces.Box(low=0, high=1, shape=(num_nodes, num_nodes), dtype=np.float32)
-            self.observation_space = spaces.Dict({'node_features': node_feat_space, 'adjacency': adj_space})
+            self.observation_space = spaces.Dict({
+                'svc_df': node_feat_space,
+                'node_df': spaces.Box(-np.inf, np.inf, shape=(1, 4), dtype=np.float32),
+                'edge_df': spaces.Box(-np.inf, np.inf, shape=(num_nodes * num_nodes, 6), dtype=np.float32),
+                'flat_feats': spaces.Box(-np.inf, np.inf, shape=(4,), dtype=np.float32),
+                'invalid_action_mask': spaces.Box(0, 1, shape=(num_nodes * self.num_actions,), dtype=np.float32),
+            })
         else:
             self.observation_space = self.get_observation_space()
 
@@ -165,18 +168,29 @@ class Redis(gym.Env):
             self.df = pd.DataFrame()
 
     def _fetch_service_graph(self):
-        nodes, edges = get_kiali_service_graph(namespace="redis")
+        from gnnrl.core.utils.kiali_client import fetch_service_graph
+
+        nodes, edge_df = fetch_service_graph(namespace="redis")
         index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)
-        for src, dst in edges:
-            if src >= len(nodes) or dst >= len(nodes):
-                continue
-            src_name = nodes[src]
-            dst_name = nodes[dst]
+        edges = []
+
+        for _, row in edge_df.iterrows():
+            src_name = nodes[row["src"]]
+            dst_name = nodes[row["dst"]]
             if src_name in index and dst_name in index:
-                adj[index[src_name], index[dst_name]] = 1
-        return adj
+                s = index[src_name]
+                d = index[dst_name]
+                adj[s, d] = 1.0
+                edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], 0])
+
+        max_edges = num * num
+        while len(edges) < max_edges:
+            edges.append([0, 0, 0, 0, 0, 0, 0])
+        edges = np.array(edges[:max_edges], dtype=np.float32)
+
+        return adj, edges
 
     def step(self, action):
         if self.current_step == 1:
@@ -405,12 +419,37 @@ class Redis(gym.Env):
                 d.transmit_traffic,
             ])
         if self.use_graph:
-            adj = self._fetch_service_graph()
+            adj, edges = self._fetch_service_graph()
+            max_edges = len(DEPLOYMENTS) * len(DEPLOYMENTS)
+            if edges.shape[0] < max_edges:
+                pad = np.zeros((max_edges - edges.shape[0], edges.shape[1]), dtype=np.float32)
+                edges = np.vstack([edges, pad])
+            edges = edges[:max_edges]
+
+            mask = self._invalid_action_mask()
+
             return {
-                'node_features': np.array(features, dtype=np.float32),
-                'adjacency': adj,
+                'svc_df': np.array(features, dtype=np.float32),
+                'node_df': np.zeros((1, 4), dtype=np.float32),
+                'edge_df': np.array(edges, dtype=np.float32),
+                'flat_feats': np.zeros(4, dtype=np.float32),
+                'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())
+
+    def _invalid_action_mask(self):
+        mask = []
+        for d in self.deploymentList:
+            for action in range(self.num_actions):
+                if action == ACTION_DO_NOTHING:
+                    mask.append(1)
+                elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                    n = action
+                    mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                else:
+                    n = action - 7
+                    mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+        return np.array(mask, dtype=np.float32)
 
     def get_observation_space(self):
         return spaces.Box(
