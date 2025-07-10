@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import HeteroConv, GATConv, GCNConv
 
 from gnnrl.core.common.feature_builder import build_hetero_data
+from gnnrl.encoders import TGNEncoder
 
 
 class HeteroGAT(nn.Module):
@@ -55,10 +56,16 @@ class HeteroGraphEncoder(nn.Module):
 
     def __init__(self, metadata, model="gat", hidden_dim=32, out_dim=32):
         super().__init__()
+        self.model = model
         if model == "gat":
             self.encoder = HeteroGAT(metadata, hidden_dim, out_dim)
         elif model == "gcn":
             self.encoder = GCNEncoder(metadata, hidden_dim, out_dim)
+        elif model == "tgn":
+            # Created lazily on first forward since num_nodes may be unknown
+            self.encoder = None
+            self.hidden_dim = hidden_dim
+            self.out_dim = out_dim
         else:
             raise ValueError(f"Unknown model: {model}")
         self.metadata = metadata
@@ -78,7 +85,21 @@ class HeteroGraphEncoder(nn.Module):
             edge_df = edge_df[0]
             
         data = build_hetero_data(svc_df, node_df, edge_df)
-        h = self.encoder(data.x_dict, data.edge_index_dict)
+
+        if self.model == "tgn":
+            num_nodes = data["svc"].x.size(0)
+            if self.encoder is None:
+                self.encoder = TGNEncoder(num_nodes, data["svc"].x.size(1), memory_dim=self.out_dim)
+            edge_index = data["svc", "calls", "svc"].edge_index
+            if edge_index.numel() == 0:
+                return data["svc"].x.mean(dim=0, keepdim=True)
+            src, dst = edge_index
+            t = torch.zeros(src.size(0), device=src.device)
+            emb = self.encoder(src, dst, t, data["svc"].x)
+            self.encoder.update_memory(src, dst, t, emb[src])
+            h = {"svc": emb, "node": data["node"].x}
+        else:
+            h = self.encoder(data.x_dict, data.edge_index_dict)
         pooled = []
         for ntype in data.node_types:
             emb = h.get(ntype)
@@ -89,13 +110,8 @@ class HeteroGraphEncoder(nn.Module):
                 emb = torch.cat([emb, pad], dim=-1)
             elif emb.size(-1) > self.out_dim:
                 emb = emb[..., :self.out_dim]
-            
-            # Debug print for service embeddings
-            if ntype == 'svc':
-                print(f"DEBUG: svc_embeds.shape = {emb.shape}")
-            
+
             pooled.append(emb.mean(dim=0))
-        
+
         final_embedding = torch.cat(pooled).unsqueeze(0)
-        print(f"DEBUG: final graph embedding shape = {final_embedding.shape}")
         return final_embedding

@@ -5,8 +5,9 @@ __version__ = "1.0.0"
 # Re-export main components from core module
 from .core import (
     HeteroGraphEncoder,
-    HeteroGAT, 
+    HeteroGAT,
     GCNEncoder,
+    TGNEncoder,
     GNNPPOPolicy,
     Redis,
     OnlineBoutique,
@@ -16,7 +17,8 @@ from .core import (
 __all__ = [
     "HeteroGraphEncoder",
     "HeteroGAT",
-    "GCNEncoder", 
+    "GCNEncoder",
+    "TGNEncoder",
     "GNNPPOPolicy",
     "Redis",
     "OnlineBoutique",

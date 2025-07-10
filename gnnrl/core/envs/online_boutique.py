@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 import os
 import time
+from pathlib import Path
 from statistics import mean
 
 import gymnasium as gym
@@ -81,7 +82,7 @@ class OnlineBoutique(gym.Env):
 
     metadata = {'render.modes': ['human', 'ansi', 'array']}
 
-    def __init__(self, k8s=False, goal_reward="cost", waiting_period=0.3, use_graph=False, dataset_path=None):
+    def __init__(self, k8s=False, goal_reward="cost", waiting_period=5.0, use_graph=False, dataset_path=None):
         # Define action and observation space
         # They must be gym.spaces objects
 
@@ -108,12 +109,9 @@ class OnlineBoutique(gym.Env):
         # Actions identified by integers 0-n -> 15 actions!
         self.num_actions = 15
 
-        # Multi-Discrete
-        # Deployment: Discrete 11
-        # Action: Discrete 9 - None[0], Add-1[1], Add-2[2], Add-3[3], Add-4[4],
-        #                      Stop-1[5], Stop-2[6], Stop-3[7], Stop-4[8]
-
-        self.action_space = spaces.MultiDiscrete([11, self.num_actions])
+        # Multi-Discrete - output an action for each service simultaneously
+        num_services = len(DEPLOYMENTS)
+        self.action_space = spaces.MultiDiscrete([self.num_actions] * num_services)
 
         # Observations: 22 Metrics! -> 2 * 11 = 22
         # "number_pods"                     -> Number of deployed Pods
@@ -146,8 +144,9 @@ class OnlineBoutique(gym.Env):
             self.observation_space = spaces.Dict({
                 'svc_df': spaces.Box(low=-np.inf, high=np.inf, shape=(num_services, node_feat_dim), dtype=np.float32),
                 'node_df': spaces.Box(low=-np.inf, high=np.inf, shape=(1, 4), dtype=np.float32),  # cluster-level metrics
-                'edge_df': spaces.Box(low=-np.inf, high=np.inf, shape=(num_services * num_services, 3), dtype=np.float32),
+                'edge_df': spaces.Box(low=-np.inf, high=np.inf, shape=(num_services * num_services, 6), dtype=np.float32),
                 'flat_feats': spaces.Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32),  # global metrics
+                'invalid_action_mask': spaces.Box(0, 1, shape=(num_services * self.num_actions,), dtype=np.float32),
             })
         else:
             self.observation_space = self.get_observation_space()
@@ -196,22 +195,29 @@ class OnlineBoutique(gym.Env):
 
 
     def _fetch_service_graph(self):
-        nodes, edges = get_kiali_service_graph(namespace="onlineboutique")
-        # Create mapping from service names to DEPLOYMENTS indices
+        from gnnrl.core.utils.kiali_client import fetch_service_graph
+
+        nodes, edge_df = fetch_service_graph(namespace="onlineboutique")
         index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
         num = len(DEPLOYMENTS)
         adj = np.zeros((num, num), dtype=np.float32)
-        
-        # Process edges - edges is list of tuples (src_idx, dst_idx) 
-        for src_idx, dst_idx in edges:
-            if src_idx >= len(nodes) or dst_idx >= len(nodes):
-                continue
-            src_name = nodes[src_idx]
-            dst_name = nodes[dst_idx]
+        edges = []
+
+        for _, row in edge_df.iterrows():
+            src_name = nodes[row["src"]]
+            dst_name = nodes[row["dst"]]
             if src_name in index and dst_name in index:
-                adj[index[src_name], index[dst_name]] = 1.0
-                
-        return adj
+                s = index[src_name]
+                d = index[dst_name]
+                adj[s, d] = 1.0
+                edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], 0])
+
+        max_edges = num * num
+        while len(edges) < max_edges:
+            edges.append([0, 0, 0, 0, 0, 0, 0])
+        edges = np.array(edges[:max_edges], dtype=np.float32)
+
+        return adj, edges
 
 
 
@@ -325,13 +331,14 @@ class OnlineBoutique(gym.Env):
     def _init_action_logging(self):
         """Initialize CSV logging for action history"""
         # Create logs directory if it doesn't exist
-        log_dir = os.getenv('LOG_ROOT', 'logs')
-        os.makedirs(log_dir, exist_ok=True)
+        log_root = Path(os.getenv('LOG_ROOT', str(Path(__file__).resolve().parents[2] / 'logs')))
+        log_dir = log_root / 'gnnrl' / 'actions'
+        log_dir.mkdir(parents=True, exist_ok=True)
         
         # Create action history CSV file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_filename = f"action_history_{timestamp}.csv"
-        self.action_log_file = os.path.join(log_dir, csv_filename)
+        self.action_log_file = str(log_dir / csv_filename)
         
         # Write CSV header
         with open(self.action_log_file, 'w', newline='') as f:
@@ -513,35 +520,45 @@ class OnlineBoutique(gym.Env):
             ])
 
         if self.use_graph:
-            adj = self._fetch_service_graph()
+            adj, edges = self._fetch_service_graph()
             features_array = np.array(features, dtype=np.float32)
-            
-            # Create edge list from adjacency matrix
-            edges = []
-            for i in range(adj.shape[0]):
-                for j in range(adj.shape[1]):
-                    if adj[i, j] > 0:
-                        edges.append([i, j, adj[i, j]])
-            
-            # Pad edges to expected shape
+
             max_edges = len(DEPLOYMENTS) * len(DEPLOYMENTS)
-            while len(edges) < max_edges:
-                edges.append([0, 0, 0])
+            if edges.shape[0] < max_edges:
+                pad = np.zeros((max_edges - edges.shape[0], edges.shape[1]), dtype=np.float32)
+                edges = np.vstack([edges, pad])
             edges = edges[:max_edges]
-            
+
+            mask = self._invalid_action_mask()
+
             # Calculate global metrics for flat_feats
             total_pods = sum(d.num_pods for d in self.deploymentList)
             avg_cpu = np.mean([d.cpu_usage for d in self.deploymentList])
-            avg_mem = np.mean([d.mem_usage for d in self.deploymentList]) 
+            avg_mem = np.mean([d.mem_usage for d in self.deploymentList])
             total_traffic = sum(d.received_traffic + d.transmit_traffic for d in self.deploymentList)
-            
+
             return {
                 'svc_df': features_array,
                 'node_df': np.array([[total_pods, avg_cpu, avg_mem, total_traffic]], dtype=np.float32),
                 'edge_df': np.array(edges, dtype=np.float32),
                 'flat_feats': np.array([total_pods, avg_cpu, avg_mem, total_traffic], dtype=np.float32),
+                'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())
+
+    def _invalid_action_mask(self):
+        mask = []
+        for d in self.deploymentList:
+            for action in range(self.num_actions):
+                if action == ACTION_DO_NOTHING:
+                    mask.append(1)
+                elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                    n = action
+                    mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                else:
+                    n = action - 7
+                    mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+        return np.array(mask, dtype=np.float32)
 
     def get_observation_space(self):
             return spaces.Box(

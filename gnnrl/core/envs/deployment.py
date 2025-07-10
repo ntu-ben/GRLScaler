@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 import requests
 import numpy as np
-from kubernetes import client
+try:  # pragma: no cover - kubernetes optional for simulation
+    from kubernetes import client
+except Exception:  # pragma: no cover
+    client = None
 
 # Load environment variables from a .env file located at the repo root.
 ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
