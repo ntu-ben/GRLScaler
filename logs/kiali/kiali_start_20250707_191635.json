@@ -1,5 +1,5 @@
 {
-  "timestamp": 1751914921,
+  "timestamp": 1751990103,
   "duration": 600,
   "graphType": "workload",
   "elements": {
@@ -24,14 +24,41 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcIn": "42.53",
-                "grpcInErr": "0.03"
+                "grpcIn": "97.97",
+                "grpcInNoResponse": "0.003"
               }
             },
             {
               "protocol": "tcp",
               "rates": {
-                "tcpOut": "3906.67"
+                "tcpOut": "9007.56"
+              }
+            }
+          ],
+          "healthData": null
+        }
+      },
+      {
+        "data": {
+          "id": "167727f00f103d3747a090e1e50fa735db6bc48a714a3b2cdd6f0aea079bcc28",
+          "nodeType": "service",
+          "cluster": "Kubernetes",
+          "namespace": "onlineboutique",
+          "app": "currencyservice",
+          "service": "currencyservice",
+          "destServices": [
+            {
+              "cluster": "Kubernetes",
+              "namespace": "onlineboutique",
+              "name": "currencyservice"
+            }
+          ],
+          "traffic": [
+            {
+              "protocol": "grpc",
+              "rates": {
+                "grpcIn": "16.76",
+                "grpcInErr": "16.76"
               }
             }
           ],
@@ -58,7 +85,8 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcIn": "84.92"
+                "grpcIn": "192.55",
+                "grpcInNoResponse": "0.009"
               }
             }
           ],
@@ -85,14 +113,15 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcOut": "422.80"
+                "grpcOut": "986.36"
               }
             },
             {
               "protocol": "http",
               "rates": {
-                "httpIn": "42.34",
-                "httpIn5xx": "0.03",
+                "httpIn": "112.95",
+                "httpIn5xx": "16.76",
+                "httpInNoResponse": "0.67",
                 "httpOut": "0.02"
               }
             }
@@ -120,8 +149,8 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcIn": "253.69",
-                "grpcInErr": "0.02"
+                "grpcIn": "583.20",
+                "grpcInNoResponse": "0.005"
               }
             }
           ],
@@ -148,9 +177,9 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcIn": "41.78",
-                "grpcInErr": "0.009",
-                "grpcOut": "42.32"
+                "grpcIn": "96.69",
+                "grpcInNoResponse": "0.01",
+                "grpcOut": "97.12"
               }
             }
           ],
@@ -177,7 +206,7 @@
             {
               "protocol": "tcp",
               "rates": {
-                "tcpIn": "3906.67"
+                "tcpIn": "9007.56"
               }
             }
           ],
@@ -204,7 +233,8 @@
             {
               "protocol": "grpc",
               "rates": {
-                "grpcIn": "42.20"
+                "grpcIn": "96.31",
+                "grpcInNoResponse": "0.01"
               }
             }
           ],
@@ -251,7 +281,7 @@
             {
               "protocol": "http",
               "rates": {
-                "httpOut": "42.34"
+                "httpOut": "112.95"
               }
             }
           ],
@@ -264,36 +294,63 @@
     "edges": [
       {
         "data": {
+          "id": "744ce9ed6d65a707c7e7e4f3fd3dc3b1964c3712a0de946c2c2d8f9f744631ac",
+          "source": "148c25e1f822e51e464d5128c1ae6c0d64dcd64caa33bebb830c701177c63242",
+          "target": "167727f00f103d3747a090e1e50fa735db6bc48a714a3b2cdd6f0aea079bcc28",
+          "responseTime": "0",
+          "traffic": {
+            "protocol": "grpc",
+            "rates": {
+              "grpc": "16.76",
+              "grpcErr": "16.76",
+              "grpcPercentErr": "100.0",
+              "grpcPercentReq": "1.7"
+            },
+            "responses": {
+              "14": {
+                "flags": {
+                  "UH": "100.0"
+                },
+                "hosts": {
+                  "currencyservice.onlineboutique.svc.cluster.local": "100.0"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "data": {
           "id": "58b9b760d545abb007c0a1f09bed186c827bfc948bdc3ebc32985b747173b8c7",
           "source": "148c25e1f822e51e464d5128c1ae6c0d64dcd64caa33bebb830c701177c63242",
           "target": "1bbd95877fa4cdf6f48a986ed2c986c1613c9496608258ac1b56b8d32715381a",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/productcatalogservice",
           "isMTLS": "100",
-          "responseTime": "4",
+          "responseTime": "32",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/frontend",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "211.37",
-              "grpcErr": "0.007",
+              "grpc": "486.08",
+              "grpcNoResponse": "0.005",
               "grpcPercentErr": "0.0",
-              "grpcPercentReq": "50.0"
+              "grpcPercentReq": "49.3"
             },
             "responses": {
+              "-": {
+                "flags": {
+                  "DR": "0.0"
+                },
+                "hosts": {
+                  "productcatalogservice.onlineboutique.svc.cluster.local": "0.0"
+                }
+              },
               "0": {
                 "flags": {
                   "-": "100.0"
                 },
                 "hosts": {
                   "productcatalogservice.onlineboutique.svc.cluster.local": "100.0"
-                }
-              },
-              "14": {
-                "flags": {
-                  "URX": "0.0"
-                },
-                "hosts": {
-                  "productcatalogservice.onlineboutique.svc.cluster.local": "0.0"
                 }
               }
             }
@@ -307,15 +364,25 @@
           "target": "35565ed1be82cd5a724607e56c905b1ad90f6174b2eeee94f3a2262156066f98",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/currencyservice",
           "isMTLS": "100",
-          "responseTime": "13",
+          "responseTime": "2306",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/frontend",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "84.92",
-              "grpcPercentReq": "20.1"
+              "grpc": "192.55",
+              "grpcNoResponse": "0.009",
+              "grpcPercentErr": "0.0",
+              "grpcPercentReq": "19.5"
             },
             "responses": {
+              "-": {
+                "flags": {
+                  "DR": "0.0"
+                },
+                "hosts": {
+                  "currencyservice.onlineboutique.svc.cluster.local": "0.0"
+                }
+              },
               "0": {
                 "flags": {
                   "-": "100.0"
@@ -335,31 +402,31 @@
           "target": "3d5eb893d68df2c423b646795f11b084830be93f69905c18d4aff9a7c893c36e",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/cartservice",
           "isMTLS": "100",
-          "responseTime": "16",
+          "responseTime": "209",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/frontend",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "42.53",
-              "grpcErr": "0.03",
-              "grpcPercentErr": "0.1",
-              "grpcPercentReq": "10.1"
+              "grpc": "97.97",
+              "grpcNoResponse": "0.003",
+              "grpcPercentErr": "0.0",
+              "grpcPercentReq": "9.9"
             },
             "responses": {
-              "0": {
+              "-": {
                 "flags": {
-                  "-": "99.9"
+                  "DR": "0.0"
                 },
                 "hosts": {
-                  "cartservice.onlineboutique.svc.cluster.local": "99.9"
+                  "cartservice.onlineboutique.svc.cluster.local": "0.0"
                 }
               },
-              "14": {
+              "0": {
                 "flags": {
-                  "URX": "0.1"
+                  "-": "100.0"
                 },
                 "hosts": {
-                  "cartservice.onlineboutique.svc.cluster.local": "0.1"
+                  "cartservice.onlineboutique.svc.cluster.local": "100.0"
                 }
               }
             }
@@ -373,15 +440,25 @@
           "target": "894c7171374ec1a604d18842f0ed0e9e569b1e9ae8a65ea539833cde92c25fab",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/shippingservice",
           "isMTLS": "100",
-          "responseTime": "4",
+          "responseTime": "43",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/frontend",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "42.20",
-              "grpcPercentReq": "10.0"
+              "grpc": "96.31",
+              "grpcNoResponse": "0.01",
+              "grpcPercentErr": "0.0",
+              "grpcPercentReq": "9.8"
             },
             "responses": {
+              "-": {
+                "flags": {
+                  "DR": "0.0"
+                },
+                "hosts": {
+                  "shippingservice.onlineboutique.svc.cluster.local": "0.0"
+                }
+              },
               "0": {
                 "flags": {
                   "-": "100.0"
@@ -401,31 +478,31 @@
           "target": "b50fb20279543537cdd6daf09e7a10971e2bc7a3becf44427dd68d92bad7ba7c",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/recommendationservice",
           "isMTLS": "100",
-          "responseTime": "25",
+          "responseTime": "376",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/frontend",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "41.78",
-              "grpcErr": "0.009",
+              "grpc": "96.69",
+              "grpcNoResponse": "0.01",
               "grpcPercentErr": "0.0",
-              "grpcPercentReq": "9.9"
+              "grpcPercentReq": "9.8"
             },
             "responses": {
+              "-": {
+                "flags": {
+                  "DR": "0.0"
+                },
+                "hosts": {
+                  "recommendationservice.onlineboutique.svc.cluster.local": "0.0"
+                }
+              },
               "0": {
                 "flags": {
                   "-": "100.0"
                 },
                 "hosts": {
                   "recommendationservice.onlineboutique.svc.cluster.local": "100.0"
-                }
-              },
-              "2": {
-                "flags": {
-                  "-": "0.0"
-                },
-                "hosts": {
-                  "recommendationservice.onlineboutique.svc.cluster.local": "0.0"
                 }
               }
             }
@@ -437,7 +514,7 @@
           "id": "2e06d9a1c59be187c5d644b87442c378bc2bc24c8dc6ad3341a47e8d211fafd0",
           "source": "148c25e1f822e51e464d5128c1ae6c0d64dcd64caa33bebb830c701177c63242",
           "target": "f85faa4bfddc44e797b2231eb44aa75048c199a521124cd7851c29cbe8f91a70",
-          "responseTime": "28667",
+          "responseTime": "29000",
           "traffic": {
             "protocol": "http",
             "rates": {
@@ -470,7 +547,7 @@
           "traffic": {
             "protocol": "tcp",
             "rates": {
-              "tcp": "3906.67"
+              "tcp": "9007.56"
             },
             "responses": {
               "-": {
@@ -491,32 +568,42 @@
           "source": "65be8a76856b9d3ef07a3348abcf6476fc80408bd342dd7882a5f4274542a1e0",
           "target": "148c25e1f822e51e464d5128c1ae6c0d64dcd64caa33bebb830c701177c63242",
           "destPrincipal": "unknown",
-          "responseTime": "210",
+          "responseTime": "8158",
           "sourcePrincipal": "unknown",
-          "throughput": "303719",
+          "throughput": "772345",
           "traffic": {
             "protocol": "http",
             "rates": {
-              "http": "42.34",
-              "http5xx": "0.03",
-              "httpPercentErr": "0.1",
+              "http": "112.95",
+              "http5xx": "16.76",
+              "httpNoResponse": "0.67",
+              "httpPercentErr": "15.4",
               "httpPercentReq": "100.0"
             },
             "responses": {
-              "200": {
+              "-": {
                 "flags": {
-                  "-": "99.9"
+                  "DC": "0.6"
                 },
                 "hosts": {
-                  "frontend-external.onlineboutique.svc.cluster.local": "99.9"
+                  "frontend-external.onlineboutique.svc.cluster.local": "0.6"
+                }
+              },
+              "200": {
+                "flags": {
+                  "-": "84.6",
+                  "DC": "0.0"
+                },
+                "hosts": {
+                  "frontend-external.onlineboutique.svc.cluster.local": "84.6"
                 }
               },
               "500": {
                 "flags": {
-                  "-": "0.1"
+                  "-": "14.8"
                 },
                 "hosts": {
-                  "frontend-external.onlineboutique.svc.cluster.local": "0.1"
+                  "frontend-external.onlineboutique.svc.cluster.local": "14.8"
                 }
               }
             }
@@ -530,14 +617,12 @@
           "target": "1bbd95877fa4cdf6f48a986ed2c986c1613c9496608258ac1b56b8d32715381a",
           "destPrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/productcatalogservice",
           "isMTLS": "100",
-          "responseTime": "4",
+          "responseTime": "20",
           "sourcePrincipal": "spiffe://cluster.local/ns/onlineboutique/sa/recommendationservice",
           "traffic": {
             "protocol": "grpc",
             "rates": {
-              "grpc": "42.32",
-              "grpcErr": "0.009",
-              "grpcPercentErr": "0.0",
+              "grpc": "97.12",
               "grpcPercentReq": "100.0"
             },
             "responses": {
@@ -547,14 +632,6 @@
                 },
                 "hosts": {
                   "productcatalogservice.onlineboutique.svc.cluster.local": "100.0"
-                }
-              },
-              "14": {
-                "flags": {
-                  "URX": "0.0"
-                },
-                "hosts": {
-                  "productcatalogservice.onlineboutique.svc.cluster.local": "0.0"
                 }
               }
             }
