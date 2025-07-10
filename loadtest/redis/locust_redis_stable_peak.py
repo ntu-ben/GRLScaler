@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Redis 峰值負載測試
+Redis 穩定峰值負載測試
 ===================
-穩定的Redis壓測，完全按照設定的RPS執行
+實現固定RPS，無抖動的 Redis 壓測
 """
 
 import random
@@ -165,7 +165,7 @@ class StableRedisUser(HttpUser):
             self.failure_count += 1
             logging.warning(f"Redis HASH 操作失敗: {e}, 但繼續測試")
 
-class RedisPeakShape(LoadTestShape):
+class StableRedisPeakShape(LoadTestShape):
     """穩定的 Redis 峰值負載，固定300 RPS，無抖動"""
     
     def __init__(self):
@@ -175,7 +175,7 @@ class RedisPeakShape(LoadTestShape):
         self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "300"))  # 固定300 RPS
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
-        print(f"🔧 Redis Peak壓測配置:")
+        print(f"🔧 穩定Redis Peak壓測配置:")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
         print(f"   📊 目標RPS: {self.target_rps} (固定)")
         print(f"   👥 目標用戶數: {self.target_users}")

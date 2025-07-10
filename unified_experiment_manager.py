@@ -44,12 +44,19 @@ import requests
 CONFIG_FILE = Path(__file__).parent / "experiment_config.yaml"
 
 class UnifiedExperimentManager:
-    def __init__(self, config_path: Path = CONFIG_FILE):
+    def __init__(self, config_path: Path = CONFIG_FILE, stable_loadtest: bool = False, 
+                 target_rps: int = None, loadtest_timeout: int = 30):
         """初始化統一實驗管理器"""
         self.repo_root = Path(__file__).parent
         self.config = self._load_config(config_path)
         self.logger = self._setup_logging()
         self._load_environment()
+        
+        # Stable loadtest 配置
+        self.stable_loadtest = stable_loadtest
+        self.target_rps = target_rps
+        self.loadtest_timeout = loadtest_timeout
+        
         self._setup_locust_scenarios()
         self._setup_hpa_configurations()
         
@@ -59,6 +66,7 @@ class UnifiedExperimentManager:
         
     def _setup_locust_scenarios(self):
         """設定 Locust 測試場景"""
+        # 現在所有腳本都是穩定版本，直接使用原本命名
         self.scenarios = {
             "offpeak": "locust_offpeak.py",
             "rushsale": "locust_rushsale.py", 
@@ -555,22 +563,48 @@ class UnifiedExperimentManager:
             return self._run_local_locust(scenario, out_dir)
     
     def _run_local_locust(self, scenario: str, out_dir: Path) -> bool:
-        """運行本地 Locust 測試 - 支持兩種環境"""
+        """運行本地 Locust 測試 - 支持兩種環境和 stable 模式"""
         # 檢查環境類型
         environment = 'onlineboutique' if self.namespace == 'onlineboutique' else 'redis'
         
-        # 優先嘗試環境專用腳本
-        script_path = self.repo_root / "loadtest" / environment / f"locust_{scenario}.py"
+        # 根據環境選擇腳本（現在都是穩定版本）
+        if environment == 'redis':
+            script_name = f"locust_redis_{scenario}.py"
+        else:
+            script_name = f"locust_{scenario}.py"
         
-        # 如果環境專用腳本不存在，嘗試OnlineBoutique通用腳本
+        # 優先嘗試環境專用腳本
+        script_path = self.repo_root / "loadtest" / environment / script_name
+        
+        # 如果環境專用腳本不存在，嘗試fallback
         if not script_path.exists():
-            script_path = self.repo_root / "loadtest" / "onlineboutique" / f"locust_{scenario}.py"
+            if environment == 'redis':
+                # Redis 環境，但腳本不存在
+                self.logger.error(f"❌ Redis 測試腳本不存在: {script_name}")
+                return False
+            else:
+                # OnlineBoutique 通用腳本
+                script_path = self.repo_root / "loadtest" / "onlineboutique" / script_name
             
         if not script_path.exists():
             self.logger.error(f"❌ 測試腳本不存在: {script_path}")
             return False
             
         self.logger.info(f"🏠 運行本地 Locust {scenario} (環境: {environment})")
+        
+        # 準備環境變數
+        env = os.environ.copy()
+        
+        # 設定目標 RPS（如果指定的話）
+        if self.target_rps:
+            env['LOCUST_TARGET_RPS'] = str(self.target_rps)
+            self.logger.info(f"🎯 目標 RPS = {self.target_rps}")
+        
+        # 設定其他環境變數
+        env['LOCUST_RUN_TIME'] = self.locust_run_time
+        if hasattr(self, 'loadtest_timeout'):
+            env['LOCUST_REQUEST_TIMEOUT'] = str(self.loadtest_timeout)
+        
         cmd = [
             "locust", "-f", str(script_path), "--headless", "--run-time", self.locust_run_time,
             "--host", self.target_host,
@@ -578,7 +612,7 @@ class UnifiedExperimentManager:
             "--html", str(out_dir / f"{scenario}.html"),
         ]
         
-        proc = subprocess.Popen(cmd)
+        proc = subprocess.Popen(cmd, env=env)
         
         self.record_kiali_graph("start")
         time.sleep(self.half_run_sec)
@@ -964,13 +998,23 @@ def main():
                        help='僅執行負載測試')
     parser.add_argument('--enable-loadtest', action='store_true',
                        help='強制啟用負載測試（適用於測試模式）')
+    parser.add_argument('--stable-loadtest', action='store_true',
+                       help='使用穩定loadtest模式（失敗時維持RPS繼續測試）')
+    parser.add_argument('--target-rps', type=int,
+                       help='設定目標RPS數值（使用穩定loadtest模式時）')
+    parser.add_argument('--loadtest-timeout', type=int, default=30,
+                       help='Loadtest請求超時時間（秒）')
     parser.add_argument('--compare', nargs='+',
                        help='比較實驗結果路徑')
     
     args = parser.parse_args()
     
     # 初始化管理器
-    manager = UnifiedExperimentManager()
+    manager = UnifiedExperimentManager(
+        stable_loadtest=args.stable_loadtest,
+        target_rps=args.target_rps,
+        loadtest_timeout=args.loadtest_timeout
+    )
     
     # 環境驗證
     if not manager.validate_environment(args.use_case):

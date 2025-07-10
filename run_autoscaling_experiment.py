@@ -37,9 +37,22 @@ def run_onlineboutique_experiment(args):
     
     print("🛍️ 啟動 OnlineBoutique 微服務自動擴展實驗")
     print("📋 測試環境: 10個微服務 (frontend, cartservice, productcatalog...)")
+    
+    # 顯示配置信息
+    if args.algorithm:
+        print(f"🧠 RL算法: {args.algorithm.upper()}")
+    if args.stable_loadtest:
+        print(f"🔧 穩定loadtest模式: 啟用 (最高RPS: {args.max_rps or '自動'})")
     print()
     
-    runner = ExperimentRunner(use_standardized_scenarios=args.standardized)
+    # 創建runner並傳遞新參數
+    runner = ExperimentRunner(
+        use_standardized_scenarios=args.standardized,
+        algorithm=args.algorithm,
+        stable_loadtest=args.stable_loadtest,
+        max_rps=args.max_rps,
+        loadtest_timeout=args.loadtest_timeout
+    )
     
     if args.method:
         # 單一方法測試
@@ -60,7 +73,13 @@ def run_onlineboutique_experiment(args):
             
         success = runner.run_single_stage(stage, args.steps, args.goal, args.model)
     else:
-        # 完整實驗
+        # 完整實驗 - 三種方法同時實驗
+        print("🚀 執行完整實驗 - 三種方法同時測試:")
+        print("   1. GNNRL (圖神經網路強化學習)")
+        print("   2. Gym-HPA (基礎強化學習)")  
+        print("   3. K8s-HPA (Kubernetes原生HPA)")
+        print()
+        
         skip_stages = set(args.skip) if args.skip else set()
         success = runner.run_complete_experiment(args.steps, args.goal, args.model, skip_stages)
     
@@ -74,7 +93,12 @@ def run_redis_experiment(args):
     print("📋 測試環境: Redis Master-Slave 架構")
     print()
     
-    runner = RedisExperimentRunner(use_standardized_scenarios=args.standardized)
+    runner = RedisExperimentRunner(
+        use_standardized_scenarios=args.standardized,
+        stable_loadtest=args.stable_loadtest,
+        max_rps=args.max_rps,
+        loadtest_timeout=args.loadtest_timeout
+    )
     success = runner.run_complete_redis_experiment(args.steps, args.goal, args.model)
     
     return success
@@ -85,17 +109,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用範例:
-  # OnlineBoutique 完整實驗
+  # OnlineBoutique 完整實驗（三種方法同時測試）
   python run_autoscaling_experiment.py onlineboutique --steps 5000
 
-  # OnlineBoutique 只測試 GNNRL
-  python run_autoscaling_experiment.py onlineboutique --method gnnrl --steps 3000
+  # 使用A2C算法進行完整實驗，穩定loadtest模式
+  python run_autoscaling_experiment.py onlineboutique --algorithm a2c --stable-loadtest --max-rps 200
+
+  # OnlineBoutique 只測試 Gym-HPA (使用A2C)
+  python run_autoscaling_experiment.py onlineboutique --method gym-hpa --algorithm a2c --stable-loadtest
 
   # Redis 完整實驗
   python run_autoscaling_experiment.py redis --steps 5000
 
   # 使用標準化場景確保公平比較
-  python run_autoscaling_experiment.py onlineboutique --standardized --steps 3000
+  python run_autoscaling_experiment.py onlineboutique --standardized --algorithm a2c --stable-loadtest
         """
     )
     
@@ -111,8 +138,19 @@ def main():
                        choices=['latency', 'cost'],
                        help='優化目標 (預設: latency)')
     parser.add_argument('--model', default='gat',
-                       choices=['gat', 'gcn', 'sage'], 
+                       choices=['gat', 'gcn', 'tgn', 'sage'], 
                        help='GNNRL 模型類型 (預設: gat)')
+    parser.add_argument('--algorithm', default='ppo',
+                       choices=['ppo', 'a2c'],
+                       help='RL算法選擇 (預設: ppo, gym-hpa也會使用此設定)')
+    
+    # Loadtest 穩定性配置
+    parser.add_argument('--max-rps', type=int, default=None,
+                       help='限定最高RPS數值，避免系統過載')
+    parser.add_argument('--stable-loadtest', action='store_true',
+                       help='使用穩定loadtest模式（失敗時維持RPS繼續測試）')
+    parser.add_argument('--loadtest-timeout', type=int, default=30,
+                       help='Loadtest請求超時時間（秒）')
     
     # 場景選項
     parser.add_argument('--standardized', action='store_true',

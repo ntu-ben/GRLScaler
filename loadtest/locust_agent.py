@@ -25,10 +25,9 @@ except ImportError:
     pass
 
 LOCUST_BIN  = shutil.which("locust") or os.getenv("LOCUST_BIN", "/usr/local/bin/locust")
-# Scenario scripts live directly under the "onlineboutique" folder. The previous
-# path used an extra "stressTest" level that does not exist and caused file
-# lookup failures.
-SCENARIO_DIR = Path(__file__).parent / "onlineboutique"
+# Scenario scripts can be in "onlineboutique" or "redis" folders
+ONLINEBOUTIQUE_DIR = Path(__file__).parent / "onlineboutique"
+REDIS_DIR = Path(__file__).parent / "redis"
 LOG_ROOT    = Path(os.getenv("LOCUST_AGENT_LOG_ROOT", "remote_logs"))      # 儲存在 m1，再由 m4 抓取
 
 class JobReq(BaseModel):
@@ -36,6 +35,10 @@ class JobReq(BaseModel):
     scenario: str              # offpeak / rushsale / …
     target_host: str           # http://frontend.onlineboutique.svc.cluster.local
     run_time: str = "15m"
+    stable_mode: bool = False  # 使用穩定loadtest模式
+    max_rps: int = None        # 最高RPS限制
+    timeout: int = 30          # 請求超時時間
+    environment: str = "onlineboutique"  # "onlineboutique" or "redis"
 
 jobs = {}   # job_id -> {"path":…, "ret":returncode}
 
@@ -68,15 +71,56 @@ def _parse_timespan(spec: str) -> int:
 def _run_locust(job_id: str, req: JobReq):
     out_dir = LOG_ROOT / req.tag
     out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 選擇環境目錄
+    scenario_dir = REDIS_DIR if req.environment == "redis" else ONLINEBOUTIQUE_DIR
+    
+    # 選擇腳本（穩定模式或原版）
+    if req.stable_mode:
+        if req.environment == "redis":
+            script_name = f"locust_redis_stable_{req.scenario}.py"
+        else:
+            script_name = f"locust_stable_{req.scenario}.py"
+        
+        stable_script = scenario_dir / script_name
+        if not stable_script.exists():
+            logging.warning(f"Stable script {script_name} not found, falling back to original")
+            if req.environment == "redis":
+                script_name = f"locust_redis_{req.scenario}.py"
+            else:
+                script_name = f"locust_{req.scenario}.py"
+    else:
+        if req.environment == "redis":
+            script_name = f"locust_redis_{req.scenario}.py"
+        else:
+            script_name = f"locust_{req.scenario}.py"
+    
+    # 準備環境變數
+    env = os.environ.copy()
+    env['LOCUST_RUN_TIME'] = req.run_time
+    if req.max_rps:
+        env['LOCUST_TARGET_RPS'] = str(req.max_rps)  # 統一使用 LOCUST_TARGET_RPS
+        env['LOCUST_MAX_RPS'] = str(req.max_rps)     # 保持舊版相容性
+    if req.timeout:
+        env['LOCUST_REQUEST_TIMEOUT'] = str(req.timeout)  # 統一命名
+    
     cmd = [
-        LOCUST_BIN, "-f", SCENARIO_DIR / f"locust_{req.scenario}.py",
+        LOCUST_BIN, "-f", scenario_dir / script_name,
         "--headless", "--run-time", req.run_time,
         "--host", req.target_host,
         "--csv", out_dir / req.scenario, "--csv-full-history",
         "--html", out_dir / f"{req.scenario}.html"
     ]
+    
+    # 記錄配置信息
+    logging.info(f"Starting {'stable' if req.stable_mode else 'standard'} loadtest: {req.scenario}")
+    if req.max_rps:
+        logging.info(f"Max RPS limit: {req.max_rps}")
     logging.debug("$ %s", " ".join(map(str, cmd)))
-    proc = subprocess.Popen(cmd)
+    logging.debug("Environment: LOCUST_TARGET_RPS=%s, LOCUST_REQUEST_TIMEOUT=%s", 
+                  env.get('LOCUST_TARGET_RPS'), env.get('LOCUST_REQUEST_TIMEOUT'))
+    
+    proc = subprocess.Popen(cmd, env=env)
     timeout = _parse_timespan(req.run_time)
     logging.debug("locust timeout set to %ss", timeout)
     try:

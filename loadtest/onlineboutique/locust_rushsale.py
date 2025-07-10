@@ -1,29 +1,102 @@
-from locust import HttpUser, task, between, LoadTestShape
+from locust import HttpUser, task, constant_throughput, LoadTestShape
 import os
+import logging
 
-class MyUser(HttpUser):
-    wait_time = between(1, 1)
+class StableUser(HttpUser):
+    """穩定壓測用戶，每個用戶每秒固定1個請求"""
+    
+    # 每個用戶每秒固定1個請求，確保RPS = 用戶數
+    wait_time = constant_throughput(1)
+    
+    def on_start(self):
+        """用戶啟動時的初始化"""
+        self.request_count = 0
+        self.failure_count = 0
+    
     @task
-    def my_task(self):
-        self.client.get("/cart")
+    def stable_load_test(self):
+        """穩定的負載測試任務"""
+        self.request_count += 1
+        
+        try:
+            # 執行請求，設置較長的超時時間
+            with self.client.get("/cart", timeout=30, catch_response=True) as response:
+                if response.status_code >= 400:
+                    # 即使響應失敗，也記錄但繼續測試
+                    self.failure_count += 1
+                    logging.warning(f"Request failed with status {response.status_code}, but continuing test")
+                    response.failure("HTTP error")
+                else:
+                    response.success()
+        except Exception as e:
+            # 捕獲所有異常但不中斷測試
+            self.failure_count += 1
+            logging.warning(f"Request exception: {e}, but continuing test")
 
 class RushSaleShape(LoadTestShape):
-    PHASE_DURATION = (15 * 60) / 4  # 每個階段約 225 秒
-
+    """穩定的搶購負載，突然上升到800 RPS，然後保持穩定"""
+    
     def __init__(self):
         super().__init__()
-        self.time_limit = int(os.environ.get('LOCUST_RUN_TIME', 900))  # 預設 15 分鐘
-
-    def tick(self):
-        """Four-stage rush sale load that repeats every 15 minutes."""
+        # 從環境變數讀取配置
+        self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
+        self.base_rps = int(os.getenv("LOCUST_BASE_RPS", "100"))  # 基礎RPS
+        self.rush_rps = int(os.getenv("LOCUST_RUSH_RPS", "800"))  # 搶購時RPS
+        self.rush_start_time = int(os.getenv("LOCUST_RUSH_START", "180"))  # 搶購開始時間(秒)
+        self.rush_duration = int(os.getenv("LOCUST_RUSH_DURATION", "300"))  # 搶購持續時間(秒)
         
-        # 檢查是否超過時間限制
-        if self.get_run_time() >= self.time_limit:
+        # 如果設定了 LOCUST_TARGET_RPS，使用固定值
+        if os.getenv("LOCUST_TARGET_RPS"):
+            self.target_rps = int(os.getenv("LOCUST_TARGET_RPS"))
+            self.fixed_mode = True
+            print(f"🔧 RushSale固定模式:")
+            print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
+            print(f"   📊 固定RPS: {self.target_rps}")
+        else:
+            self.fixed_mode = False
+            print(f"🔧 RushSale動態模式:")
+            print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
+            print(f"   📊 基礎RPS: {self.base_rps}")
+            print(f"   🚀 搶購時RPS: {self.rush_rps}")
+            print(f"   🔥 搶購時間: {self.rush_start_time}秒 ~ {self.rush_start_time + self.rush_duration}秒")
+    
+    def _parse_time(self, time_str):
+        """解析時間字符串"""
+        if time_str.endswith('m'):
+            return int(time_str[:-1]) * 60
+        elif time_str.endswith('s'):
+            return int(time_str[:-1])
+        elif time_str.endswith('h'):
+            return int(time_str[:-1]) * 3600
+        else:
+            return 900  # 預設15分鐘
+    
+    def tick(self):
+        """返回當前時刻的用戶數和生成速率"""
+        run_time = self.get_run_time()
+        
+        # 檢查是否超過運行時間
+        if run_time >= self.run_time_seconds:
             return None
+        
+        if self.fixed_mode:
+            # 固定模式：直接使用 LOCUST_TARGET_RPS
+            return (self.target_rps, self.target_rps)
+        else:
+            # 動態模式：判斷當前階段
+            if run_time < self.rush_start_time:
+                # 基礎負載階段
+                target_users = self.base_rps
+            elif run_time < self.rush_start_time + self.rush_duration:
+                # 搶購階段
+                target_users = self.rush_rps
+            else:
+                # 搶購結束，回到基礎負載
+                target_users = self.base_rps
+            
+            # 固定用戶數，無抖動
+            return (target_users, target_users)
 
-        t = self.get_run_time() % (15 * 60)
-        phase = int(t // self.PHASE_DURATION)
-        # 四個階段的 user 數：[50, 50, 800, 50]
-        users = [50, 50, 800, 50][phase]
-        return (users, users)
-
+# 設置日誌
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(levelname)s - %(message)s')

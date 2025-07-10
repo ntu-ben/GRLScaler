@@ -18,19 +18,24 @@ from datetime import datetime
 from experiment_planner import ExperimentPlanner
 
 class ExperimentRunner:
-    def __init__(self, repo_root: Path = None, use_standardized_scenarios: bool = False):
+    def __init__(self, repo_root: Path = None, use_standardized_scenarios: bool = False,
+                 algorithm: str = 'ppo', stable_loadtest: bool = False, 
+                 max_rps: int = None, loadtest_timeout: int = 30):
         self.repo_root = repo_root or Path(__file__).parent
         self.planner = ExperimentPlanner(repo_root)
         self.use_standardized_scenarios = use_standardized_scenarios
+        self.stable_loadtest = stable_loadtest
+        self.max_rps = max_rps
+        self.loadtest_timeout = loadtest_timeout
         
-        # 預設配置
+        # 預設配置（支援A2C）
         self.config = {
             'seed': 42,
             'steps': 5000,
             'goal': 'latency',
             'use_case': 'online_boutique',
             'model': 'gat',
-            'alg': 'ppo'
+            'alg': algorithm or 'ppo'  # 支援傳入的算法
         }
         
         # 如果使用標準化場景，載入配置
@@ -118,6 +123,14 @@ class ExperimentRunner:
             "--seed", str(self.config['seed'])
         ]
         
+        # 添加 stable loadtest 參數
+        if self.stable_loadtest:
+            cmd.append("--stable-loadtest")
+        if self.max_rps:
+            cmd.extend(["--target-rps", str(self.max_rps)])
+        if self.loadtest_timeout:
+            cmd.extend(["--loadtest-timeout", str(self.loadtest_timeout)])
+        
         if gym_plan.get('skip_training', False) and gym_plan.get('model_path'):
             # 使用現有模型進行測試
             self.log_success(f"使用現有模型: {Path(gym_plan['model_path']).name}")
@@ -181,6 +194,14 @@ class ExperimentRunner:
             "--seed", str(self.config['seed'])
         ]
         
+        # 添加 stable loadtest 參數
+        if self.stable_loadtest:
+            cmd.append("--stable-loadtest")
+        if self.max_rps:
+            cmd.extend(["--target-rps", str(self.max_rps)])
+        if self.loadtest_timeout:
+            cmd.extend(["--loadtest-timeout", str(self.loadtest_timeout)])
+        
         if gnnrl_plan.get('skip_training', False) and gnnrl_plan.get('model_path'):
             # 使用現有模型進行測試
             self.log_success(f"使用現有模型: {Path(gnnrl_plan['model_path']).name}")
@@ -238,6 +259,14 @@ class ExperimentRunner:
             "--seed", str(self.config['seed']),
             "--run-tag", f"k8s_hpa_cpu_seed{self.config['seed']}_{timestamp}"
         ]
+        
+        # 添加 stable loadtest 參數
+        if self.stable_loadtest:
+            cmd.append("--stable-loadtest")
+        if self.max_rps:
+            cmd.extend(["--target-rps", str(self.max_rps)])
+        if self.loadtest_timeout:
+            cmd.extend(["--loadtest-timeout", str(self.loadtest_timeout)])
         
         try:
             if self.use_standardized_scenarios:

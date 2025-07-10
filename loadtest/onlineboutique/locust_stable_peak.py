@@ -33,7 +33,7 @@ class StableUser(HttpUser):
             self.failure_count += 1
             logging.warning(f"Request exception: {e}, but continuing test")
 
-class PeakShape(LoadTestShape):
+class StablePeakShape(LoadTestShape):
     """穩定的峰值負載，固定400 RPS，無抖動"""
     
     def __init__(self):
@@ -43,7 +43,7 @@ class PeakShape(LoadTestShape):
         self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "400"))  # 固定400 RPS
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
-        print(f"🔧 Peak壓測配置:")
+        print(f"🔧 穩定Peak壓測配置:")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
         print(f"   📊 目標RPS: {self.target_rps} (固定)")
         print(f"   👥 目標用戶數: {self.target_users}")

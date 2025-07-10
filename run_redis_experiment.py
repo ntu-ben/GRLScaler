@@ -18,8 +18,15 @@ from run_onlineboutique_experiment import ExperimentRunner
 class RedisExperimentRunner(ExperimentRunner):
     """Redis 實驗執行器"""
     
-    def __init__(self, use_standardized_scenarios: bool = False):
-        super().__init__(use_standardized_scenarios=use_standardized_scenarios)
+    def __init__(self, use_standardized_scenarios: bool = False, 
+                 stable_loadtest: bool = False, max_rps: int = None, 
+                 loadtest_timeout: int = 30):
+        super().__init__(
+            use_standardized_scenarios=use_standardized_scenarios,
+            stable_loadtest=stable_loadtest,
+            max_rps=max_rps,
+            loadtest_timeout=loadtest_timeout
+        )
         
         # Redis 專用配置
         self.config.update({

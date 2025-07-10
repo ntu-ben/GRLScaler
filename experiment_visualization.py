@@ -107,24 +107,24 @@ class ExperimentDataExtractor:
             return None
     
     def get_baseline_rps(self, scenario: str, environment: str = 'redis') -> float:
-        """獲取原始壓測設定的基準RPS"""
+        """獲取原始壓測設定的基準RPS (根據loadtest實際配置)"""
         if environment == 'onlineboutique':
-            # OnlineBoutique 環境的基準RPS (根據Locust配置)
+            # OnlineBoutique 環境的基準RPS (根據實際loadtest配置)
             baseline_rps = {
-                'offpeak': 30.0,      # 低峰30 RPS
-                'peak': 100.0,        # 高峰100 RPS  
-                'rushsale': 200.0,    # 搶購200 RPS
-                'fluctuating': 80.0,  # 波動平均80 RPS
+                'offpeak': 50.0,      # locust_offpeak.py: 50 users → ~50 RPS
+                'peak': 300.0,        # locust_peak.py: 300 users → ~300 RPS  
+                'rushsale': 500.0,    # locust_rushsale.py: 峰值800 users，平均~500 RPS
+                'fluctuating': 275.0, # locust_fluctuating.py: [50,300,50,800] 平均275 RPS
             }
         else:
-            # Redis 環境的基準RPS
+            # Redis 環境的基準RPS (根據實際loadtest配置)
             baseline_rps = {
-                'offpeak': 50.0,      # 低峰50 RPS
-                'peak': 200.0,        # 高峰200 RPS
-                'rushsale': 500.0,    # 搶購500 RPS
-                'fluctuating': 150.0, # 波動平均150 RPS
-                'redis_offpeak': 100.0,
-                'redis_peak': 300.0
+                'offpeak': 75.0,      # redis_offpeak: 10-30 users, 實測50-100 RPS，平均75
+                'peak': 650.0,        # redis_peak: 100-200 users, 實測500-800 RPS，平均650
+                'rushsale': 500.0,    # 搶購模式
+                'fluctuating': 350.0, # 波動模式平均
+                'redis_offpeak': 75.0,
+                'redis_peak': 650.0
             }
         return baseline_rps.get(scenario, 100.0)
     
@@ -170,22 +170,33 @@ class ExperimentVisualizer:
         
         fig, ax = plt.subplots(figsize=(12, 8))
         
-        # 獲取基準RPS
+        # 獲取基準RPS（更新後的穩定數值）
         baseline_rps = self.extractor.get_baseline_rps(scenario, environment)
         
-        # 設定顏色和標記
-        colors = {'GNNRL': '#2E86AB', 'Gym-HPA': '#A23B72', 'K8s-HPA': '#F18F01', 'Baseline': '#C73E1D'}
-        linestyles = {'GNNRL': '-', 'Gym-HPA': '--', 'K8s-HPA': '-.', 'Baseline': ':'}
+        # 設定顏色和標記（加入穩定模式識別）
+        colors = {'GNNRL': '#2E86AB', 'Gym-HPA': '#A23B72', 'K8s-HPA': '#F18F01', 'Baseline': '#C73E1D', 'Stable-Baseline': '#27AE60'}
+        linestyles = {'GNNRL': '-', 'Gym-HPA': '--', 'K8s-HPA': '-.', 'Baseline': ':', 'Stable-Baseline': '--'}
         
         # 標準化時間軸為0-15分鐘
         max_duration_minutes = 15
         
-        # 繪製基準線 (0-15分鐘)
+        # 繪製基準線 (0-15分鐘) - 區分穩定模式和原始模式
         baseline_times = list(range(max_duration_minutes + 1))
         baseline_data = [baseline_rps] * len(baseline_times)
-        ax.plot(baseline_times, baseline_data, 
-               color=colors['Baseline'], linestyle=linestyles['Baseline'], 
-               linewidth=2, alpha=0.8, label='原始壓測設定')
+        
+        # 檢測是否有穩定測試數據
+        has_stable_data = any('stable' in str(df.columns).lower() if not df.empty else False for df in experiment_data.values())
+        
+        if has_stable_data:
+            # 使用穩定基準線
+            ax.plot(baseline_times, baseline_data, 
+                   color=colors['Stable-Baseline'], linestyle=linestyles['Stable-Baseline'], 
+                   linewidth=2, alpha=0.8, label='穩定壓測基準 (有RPS限制)')
+        else:
+            # 使用原始基準線
+            ax.plot(baseline_times, baseline_data, 
+                   color=colors['Baseline'], linestyle=linestyles['Baseline'], 
+                   linewidth=2, alpha=0.8, label='原始壓測設定')
         
         # 繪製各方法的RPS數據
         for method, df in experiment_data.items():

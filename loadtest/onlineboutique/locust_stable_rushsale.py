@@ -3,10 +3,10 @@ import os
 import logging
 
 class StableUser(HttpUser):
-    """穩定壓測用戶，每個用戶每秒固定1個請求"""
+    """穩定壓測用戶，即使失敗也維持RPS"""
     
-    # 每個用戶每秒固定1個請求，確保RPS = 用戶數
-    wait_time = constant_throughput(1)
+    # 使用constant_throughput確保穩定的請求頻率
+    wait_time = constant_throughput(1)  # 每個用戶每秒1個請求
     
     def on_start(self):
         """用戶啟動時的初始化"""
@@ -33,20 +33,23 @@ class StableUser(HttpUser):
             self.failure_count += 1
             logging.warning(f"Request exception: {e}, but continuing test")
 
-class PeakShape(LoadTestShape):
-    """穩定的峰值負載，固定400 RPS，無抖動"""
+class StableRushSaleShape(LoadTestShape):
+    """穩定的搶購負載，突然上升到800 RPS，然後保持穩定"""
     
     def __init__(self):
         super().__init__()
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
-        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "400"))  # 固定400 RPS
-        self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
+        self.base_rps = int(os.getenv("LOCUST_BASE_RPS", "100"))  # 基礎RPS
+        self.rush_rps = int(os.getenv("LOCUST_RUSH_RPS", "800"))  # 搶購時RPS
+        self.rush_start_time = int(os.getenv("LOCUST_RUSH_START", "180"))  # 搶購開始時間(秒)
+        self.rush_duration = int(os.getenv("LOCUST_RUSH_DURATION", "300"))  # 搶購持續時間(秒)
         
-        print(f"🔧 Peak壓測配置:")
+        print(f"🔧 穩定RushSale壓測配置:")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
-        print(f"   📊 目標RPS: {self.target_rps} (固定)")
-        print(f"   👥 目標用戶數: {self.target_users}")
+        print(f"   📊 基礎RPS: {self.base_rps}")
+        print(f"   🚀 搶購時RPS: {self.rush_rps}")
+        print(f"   🔥 搶購時間: {self.rush_start_time}秒 ~ {self.rush_start_time + self.rush_duration}秒")
     
     def _parse_time(self, time_str):
         """解析時間字符串"""
@@ -67,9 +70,19 @@ class PeakShape(LoadTestShape):
         if run_time >= self.run_time_seconds:
             return None
         
-        # 立即達到目標用戶數，保持穩定
-        # 用戶數固定 = 目標RPS，無抖動
-        return (self.target_users, self.target_users)
+        # 判斷當前階段
+        if run_time < self.rush_start_time:
+            # 基礎負載階段
+            target_users = self.base_rps
+        elif run_time < self.rush_start_time + self.rush_duration:
+            # 搶購階段
+            target_users = self.rush_rps
+        else:
+            # 搶購結束，回到基礎負載
+            target_users = self.base_rps
+        
+        # 固定用戶數，無抖動
+        return (target_users, target_users)
 
 # 設置日誌
 logging.basicConfig(level=logging.INFO, 
