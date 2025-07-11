@@ -23,7 +23,7 @@ from .util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_nu
 
 # MIN and MAX Replication
 MIN_REPLICATION = 1
-MAX_REPLICATION = 8
+MAX_REPLICATION = 7  # 實際測試最大可用值
 
 MAX_STEPS = 25  # MAX Number of steps per episode
 

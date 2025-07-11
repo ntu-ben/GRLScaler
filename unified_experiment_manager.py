@@ -410,19 +410,24 @@ class UnifiedExperimentManager:
             training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
             self.logger.info(f"🔄 GNNRL 測試進程已開始...")
             
-            # 等待測試完成後再執行負載測試
+            # 等待測試完成後再執行固定場景測試
             training_proc.wait()
-            training_proc = None  # 設為 None 以執行單次負載測試
+            
+            # 測試模式：使用固定的4個場景測試（與K8s-HPA相同）
+            self.logger.info("🧪 GNNRL 測試模式：執行固定4個場景測試")
+            scenario_dirs = self.run_fixed_hpa_loadtest(
+                "gnnrl", run_tag, kwargs.get('seed', 42)
+            )
         else:
             # 訓練模式：啟動 GNNRL 訓練進程
             self.logger.info("🎯 使用訓練模式")
             training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
             self.logger.info(f"🔄 GNNRL 訓練已開始，繼續負載測試...")
-        
-        # 運行持續負載測試
-        scenario_dirs = self.run_continuous_loadtest(
-            "gnnrl", run_tag, kwargs.get('seed', 42), training_proc
-        )
+            
+            # 訓練模式：運行持續負載測試
+            scenario_dirs = self.run_continuous_loadtest(
+                "gnnrl", run_tag, kwargs.get('seed', 42), training_proc
+            )
         
         return len(scenario_dirs) > 0
     
@@ -687,7 +692,7 @@ class UnifiedExperimentManager:
         return scenario_dirs
 
     def run_fixed_hpa_loadtest(self, experiment_type: str, run_tag: str, seed: int) -> List[Path]:
-        """為 HPA 基準測試運行固定的 4 個場景序列"""
+        """運行固定的 4 個場景序列（用於基準測試和公平比較）"""
         # 生成固定的場景序列（基於 seed）
         random.seed(seed)
         scenario_list = list(self.scenarios.keys())
@@ -708,7 +713,7 @@ class UnifiedExperimentManager:
             
             if seed in saved_sequences:
                 fixed_sequence = saved_sequences[seed]
-                self.logger.info(f"📋 使用已保存的 HPA 測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
+                self.logger.info(f"📋 使用已保存的固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
             else:
                 # 生成新序列並保存
                 fixed_sequence = random.choices(scenario_list, k=4)
@@ -719,7 +724,7 @@ class UnifiedExperimentManager:
                     for s, seq in saved_sequences.items():
                         f.write(f"{s}:{','.join(seq)}\n")
                 
-                self.logger.info(f"📋 生成並保存新的 HPA 測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
+                self.logger.info(f"📋 生成並保存新的固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
         else:
             # 首次運行，生成並保存序列
             fixed_sequence = random.choices(scenario_list, k=4)
@@ -728,7 +733,7 @@ class UnifiedExperimentManager:
             with open(sequence_file, 'w') as f:
                 f.write(f"{seed}:{','.join(fixed_sequence)}\n")
             
-            self.logger.info(f"📋 首次生成 HPA 測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
+            self.logger.info(f"📋 首次生成固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
         
         # 創建基礎輸出目錄
         base_output_dir = self.repo_root / "logs" / experiment_type / run_tag
@@ -739,7 +744,7 @@ class UnifiedExperimentManager:
         # 執行固定序列的 4 個場景
         for i, scenario in enumerate(fixed_sequence, 1):
             out_dir = base_output_dir / f"{scenario}_{i:03d}"
-            self.logger.info(f"📊 執行 HPA 測試情境 [{i}/4]: {scenario}")
+            self.logger.info(f"📊 執行固定測試情境 [{i}/4]: {scenario}")
             
             # 構建遠端標籤
             remote_tag = f"{experiment_type}/{run_tag}" if self.m1_host else run_tag
@@ -751,11 +756,11 @@ class UnifiedExperimentManager:
             
             # 場景間短暫冷卻
             if i < len(fixed_sequence):
-                cooldown = 30  # HPA 測試間較短的冷卻時間
-                self.logger.info(f"⏸️ HPA 場景間冷卻 {cooldown} 秒...")
+                cooldown = 60  # 固定測試間的標準冷卻時間
+                self.logger.info(f"⏸️ 固定場景間冷卻 {cooldown} 秒...")
                 time.sleep(cooldown)
         
-        self.logger.info(f"🏁 HPA 基準測試完成，執行了 {len(scenario_dirs)} 個場景")
+        self.logger.info(f"🏁 固定場景測試完成，執行了 {len(scenario_dirs)} 個場景")
         return scenario_dirs
     
     def run_multi_hpa_experiment(self, experiment_type: str, run_tag: str, seed: int, hpa_type: str = 'all') -> List[Path]:

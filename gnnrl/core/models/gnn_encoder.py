@@ -90,11 +90,14 @@ class HeteroGraphEncoder(nn.Module):
             num_nodes = data["svc"].x.size(0)
             if self.encoder is None:
                 self.encoder = TGNEncoder(num_nodes, data["svc"].x.size(1), memory_dim=self.out_dim)
+                self.tgn_step = 0
             edge_index = data["svc", "calls", "svc"].edge_index
             if edge_index.numel() == 0:
                 return data["svc"].x.mean(dim=0, keepdim=True)
             src, dst = edge_index
-            t = torch.zeros(src.size(0), device=src.device)
+            # Use real timestep instead of zeros
+            self.tgn_step += 1
+            t = torch.full((src.size(0),), self.tgn_step, device=src.device, dtype=torch.long)
             emb = self.encoder(src, dst, t, data["svc"].x)
             self.encoder.update_memory(src, dst, t, emb[src])
             h = {"svc": emb, "node": data["node"].x}

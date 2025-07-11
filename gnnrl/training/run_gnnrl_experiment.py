@@ -44,6 +44,13 @@ from stable_baselines3 import PPO, A2C
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, BaseCallback
 
+# Import graph visualization callback
+try:
+    from callbacks.graph_visualization_callback import GraphVisualizationCallback
+    HAS_GRAPH_VIZ = True
+except ImportError:
+    HAS_GRAPH_VIZ = False
+
 from gnnrl.core.envs import OnlineBoutique
 from gnnrl.core.agents.ppo_gnn import GNNPPOPolicy
 from stable_baselines3.common.policies import ActorCriticPolicy
@@ -530,6 +537,19 @@ def run_experiment(args):
                 name_prefix=f"gnnrl_{args.model}_{args.goal}"
             )
             callbacks.append(checkpoint_callback)
+            
+            # Graph visualization callback (every 500 steps)
+            if HAS_GRAPH_VIZ and args.use_graph:
+                graph_viz_dir = Path(args.log_dir) / "graph_visualizations"
+                graph_viz_callback = GraphVisualizationCallback(
+                    save_freq=500,
+                    output_dir=str(graph_viz_dir),
+                    verbose=1
+                )
+                callbacks.append(graph_viz_callback)
+                logger.info("✅ Graph visualization callback enabled (every 500 steps)")
+            elif not HAS_GRAPH_VIZ and args.use_graph:
+                logger.warning("⚠️ Graph visualization callback not available - missing dependencies")
             
             callback_list = CallbackList(callbacks)
             

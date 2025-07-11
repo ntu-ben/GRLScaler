@@ -41,7 +41,7 @@ PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://localhost:9090/')
 HOST = os.getenv('KUBE_HOST', 'http://localhost:8001')
 
 # Kiali graph API base URL
-KIALI_URL = os.getenv("KIALI_URL", "http://localhost:30326/kiali")
+KIALI_URL = os.getenv("KIALI_URL", "http://localhost:20001/kiali")
 
 
 def _get_default_service_graph(namespace: str):

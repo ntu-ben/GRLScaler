@@ -88,17 +88,14 @@ class GNNPPOPolicy(ActorCriticPolicy):
             logits = logits + (obs["invalid_action_mask"].to(logits.device) - 1) * 1e10
         
         # Create distribution for MultiDiscrete action space
-        # Use the actual MultiCategoricalDistribution from Stable Baselines3
         from stable_baselines3.common.distributions import MultiCategoricalDistribution
         
-        # Split logits according to action space dimensions
+        # Split logits according to action space dimensions  
         split_logits = torch.split(logits, self.action_dims.tolist(), dim=-1)
-        concatenated_logits = torch.cat(split_logits, dim=-1)
         
-        # Create the distribution with the action dimensions
-        distribution = MultiCategoricalDistribution(concatenated_logits)
-        # Set the action_dims attribute that MultiCategoricalDistribution expects
-        distribution.action_dims = self.action_dims
+        # Create the distribution with the split logits
+        distribution = MultiCategoricalDistribution(self.action_dims)
+        distribution = distribution.proba_distribution(action_logits=torch.cat(split_logits, dim=-1))
         
         # Get values
         values = self.value_net(latent)

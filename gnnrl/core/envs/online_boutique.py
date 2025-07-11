@@ -23,10 +23,11 @@ from .deployment import (
 )
 from .util import save_to_csv, get_num_pods, get_cost_reward, \
     get_latency_reward_online_boutique
+from .dynamic_graph_space import DynamicGraphSpace, DynamicGraphConfig
 
 # MIN and MAX Replication
 MIN_REPLICATION = 1
-MAX_REPLICATION = 8
+MAX_REPLICATION = 7  # 實際測試最大可用值
 
 MAX_STEPS = 25  # MAX Number of steps per episode
 
@@ -96,6 +97,17 @@ class OnlineBoutique(gym.Env):
         self.use_graph = use_graph
         self.waiting_period = waiting_period  # seconds to wait after action
 
+        # 初始化動態圖空間管理器
+        if self.use_graph:
+            config = DynamicGraphConfig(
+                max_nodes=20,  # 支援擴展到20個節點
+                max_edges=400,  # 20*20
+                node_feat_dim=6,
+                edge_feat_dim=7,
+                global_feat_dim=4
+            )
+            self.dynamic_graph = DynamicGraphSpace(config)
+
         logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
 
         # Current Step
@@ -137,17 +149,8 @@ class OnlineBoutique(gym.Env):
             d.print_deployment()
 
         if self.use_graph:
-            num_services = len(DEPLOYMENTS)
-            node_feat_dim = 6
-            # Define graph observation space compatible with GNNPPOPolicy
-            # Flatten observation space for Stable Baselines3 compatibility
-            self.observation_space = spaces.Dict({
-                'svc_df': spaces.Box(low=-np.inf, high=np.inf, shape=(num_services, node_feat_dim), dtype=np.float32),
-                'node_df': spaces.Box(low=-np.inf, high=np.inf, shape=(1, 4), dtype=np.float32),  # cluster-level metrics
-                'edge_df': spaces.Box(low=-np.inf, high=np.inf, shape=(num_services * num_services, 6), dtype=np.float32),
-                'flat_feats': spaces.Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32),  # global metrics
-                'invalid_action_mask': spaces.Box(0, 1, shape=(num_services * self.num_actions,), dtype=np.float32),
-            })
+            # 使用動態圖觀察空間
+            self.observation_space = self.dynamic_graph.create_observation_space()
         else:
             self.observation_space = self.get_observation_space()
 
@@ -198,26 +201,50 @@ class OnlineBoutique(gym.Env):
         from gnnrl.core.utils.kiali_client import fetch_service_graph
 
         nodes, edge_df = fetch_service_graph(namespace="onlineboutique")
-        index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
-        num = len(DEPLOYMENTS)
-        adj = np.zeros((num, num), dtype=np.float32)
-        edges = []
+        
+        if not self.use_graph:
+            # 兼容原本的固定圖模式
+            index = {name: DEPLOYMENTS.index(name) for name in DEPLOYMENTS if name in nodes}
+            num = len(DEPLOYMENTS)
+            adj = np.zeros((num, num), dtype=np.float32)
+            edges = []
 
+            for _, row in edge_df.iterrows():
+                src_name = nodes[row["src"]]
+                dst_name = nodes[row["dst"]]
+                if src_name in index and dst_name in index:
+                    s = index[src_name]
+                    d = index[dst_name]
+                    adj[s, d] = 1.0
+                    edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], row.get("mtls", 0)])
+
+            max_edges = num * num
+            while len(edges) < max_edges:
+                edges.append([0, 0, 0, 0, 0, 0, 0])
+            edges = np.array(edges[:max_edges], dtype=np.float32)
+            return adj, edges
+        
+        # 動態圖模式：支援可變節點數量
+        # 更新節點映射
+        active_services = [name for name in nodes if name in DEPLOYMENTS or name.startswith('additional-')]
+        node_mapping = self.dynamic_graph.update_node_mapping(active_services)
+        
+        # 建構動態邊列表
+        edges = []
         for _, row in edge_df.iterrows():
             src_name = nodes[row["src"]]
             dst_name = nodes[row["dst"]]
-            if src_name in index and dst_name in index:
-                s = index[src_name]
-                d = index[dst_name]
-                adj[s, d] = 1.0
-                edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], 0])
-
-        max_edges = num * num
-        while len(edges) < max_edges:
-            edges.append([0, 0, 0, 0, 0, 0, 0])
-        edges = np.array(edges[:max_edges], dtype=np.float32)
-
-        return adj, edges
+            if src_name in node_mapping and dst_name in node_mapping:
+                s = node_mapping[src_name]
+                d = node_mapping[dst_name]
+                # [src, dst, active, qps, p95, err_rate, mtls]
+                edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], row.get("mtls", 0)])
+        
+        # 使用動態圖空間填充邊特徵
+        edge_array = np.array(edges, dtype=np.float32) if edges else np.zeros((0, 7), dtype=np.float32)
+        padded_edges, edge_mask = self.dynamic_graph.pad_edge_features(edge_array, len(edges))
+        
+        return padded_edges, edge_mask, len(active_services)
 
 
 
@@ -229,42 +256,51 @@ class OnlineBoutique(gym.Env):
 
             self.time_start = time.time()
 
-        # Get first action: deployment
-        if action[ID_DEPLOYMENTS] == 0:  # recommendation
-            n = ID_recommendation
-        elif action[ID_DEPLOYMENTS] == 1:  # product catalog
-            n = ID_product_catalog
-        elif action[ID_DEPLOYMENTS] == 2:  # cart_service
-            n = ID_cart_service
-        elif action[ID_DEPLOYMENTS] == 3:  # ad_service
-            n = ID_ad_service
-        elif action[ID_DEPLOYMENTS] == 4:  # payment_service
-            n = ID_payment_service
-        elif action[ID_DEPLOYMENTS] == 5:  # shipping_service
-            n = ID_shipping_service
-        elif action[ID_DEPLOYMENTS] == 6:  # currency_service
-            n = ID_currency_service
-        elif action[ID_DEPLOYMENTS] == 7:  # redis_cart
-            n = ID_redis_cart
-        elif action[ID_DEPLOYMENTS] == 8:  # checkout_service
-            n = ID_checkout_service
-        elif action[ID_DEPLOYMENTS] == 9:  # frontend
-            n = ID_frontend
-        else:  # ==10 email
-            n = ID_email
+        # Handle multi-discrete action space
+        if hasattr(action, '__len__') and len(action) > 1:
+            # Multi-discrete action: each service gets its own action
+            service_actions = action
+        else:
+            # Single action: convert to multi-discrete format
+            service_actions = [action] * len(DEPLOYMENTS)
+        
+        # Process each service action
+        for service_idx, service_action in enumerate(service_actions):
+            if service_idx >= len(DEPLOYMENTS):
+                break
+                
+            n = service_idx
+            move_action = service_action
 
+        # For simplicity, only execute the first non-zero action
+        executed_action = None
+        executed_service = None
+        
+        for service_idx, service_action in enumerate(service_actions):
+            if service_idx >= len(DEPLOYMENTS):
+                break
+            if service_action != 0:  # Non-zero action
+                executed_action = service_action
+                executed_service = service_idx
+                break
+        
+        # If no non-zero action, use the first action
+        if executed_action is None:
+            executed_action = service_actions[0] if service_actions else 0
+            executed_service = 0
+        
         # Record old replicas for logging
-        old_replicas = self.deploymentList[n].desired_replicas
+        old_replicas = self.deploymentList[executed_service].desired_replicas
         
         # Execute one time step within the environment
-        self.take_action(action[ID_MOVES], n)
+        self.take_action(executed_action, executed_service)
         
         # Record new replicas for logging
-        new_replicas = self.deploymentList[n].desired_replicas
+        new_replicas = self.deploymentList[executed_service].desired_replicas
 
         # Wait a few seconds if on real k8s cluster
         if self.k8s:
-            if action[ID_MOVES] != ACTION_DO_NOTHING \
+            if executed_action != ACTION_DO_NOTHING \
                     and self.constraint_min_pod_replicas is False \
                     and self.constraint_max_pod_replicas is False:
                 # logging.info('[Step {}] | Waiting {} seconds for enabling action ...'
@@ -283,9 +319,9 @@ class OnlineBoutique(gym.Env):
         self.total_reward += reward
 
         # Log action for diagnostics
-        deployment_name = DEPLOYMENTS[n] if n < len(DEPLOYMENTS) else f"deployment_{n}"
+        deployment_name = DEPLOYMENTS[executed_service] if executed_service < len(DEPLOYMENTS) else f"deployment_{executed_service}"
         obs_for_logging = self.get_state()
-        self._log_action(self.current_step, action, n, deployment_name, 
+        self._log_action(self.current_step, [executed_service, executed_action], executed_service, deployment_name, 
                         old_replicas, new_replicas, reward, obs_for_logging)
 
         self.avg_pods.append(get_num_pods(self.deploymentList))
@@ -294,7 +330,7 @@ class OnlineBoutique(gym.Env):
         # Print Step and Total Reward
         # if self.current_step == MAX_STEPS:
         logging.info('[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}'.format(
-            self.current_step, DEPLOYMENTS[action[0]], MOVES[action[1]], reward, self.total_reward))
+            self.current_step, DEPLOYMENTS[executed_service], MOVES[executed_action], reward, self.total_reward))
 
         ob = self.get_state()
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -520,28 +556,33 @@ class OnlineBoutique(gym.Env):
             ])
 
         if self.use_graph:
-            adj, edges = self._fetch_service_graph()
+            # 使用動態圖系統
+            padded_edges, edge_mask, num_active_nodes = self._fetch_service_graph()
             features_array = np.array(features, dtype=np.float32)
-
-            max_edges = len(DEPLOYMENTS) * len(DEPLOYMENTS)
-            if edges.shape[0] < max_edges:
-                pad = np.zeros((max_edges - edges.shape[0], edges.shape[1]), dtype=np.float32)
-                edges = np.vstack([edges, pad])
-            edges = edges[:max_edges]
-
-            mask = self._invalid_action_mask()
-
-            # Calculate global metrics for flat_feats
+            
+            # 填充節點特徵到最大節點數
+            padded_nodes, node_mask = self.dynamic_graph.pad_node_features(features_array, num_active_nodes)
+            
+            # 計算全局特徵
             total_pods = sum(d.num_pods for d in self.deploymentList)
             avg_cpu = np.mean([d.cpu_usage for d in self.deploymentList])
             avg_mem = np.mean([d.mem_usage for d in self.deploymentList])
             total_traffic = sum(d.received_traffic + d.transmit_traffic for d in self.deploymentList)
+            global_features = np.array([total_pods, avg_cpu, avg_mem, total_traffic], dtype=np.float32)
+            
+            # 填充全局特徵
+            padded_global = self.dynamic_graph.pad_global_features(global_features)
+            
+            # 動作遮罩
+            mask = self._invalid_action_mask()
 
             return {
-                'svc_df': features_array,
-                'node_df': np.array([[total_pods, avg_cpu, avg_mem, total_traffic]], dtype=np.float32),
-                'edge_df': np.array(edges, dtype=np.float32),
-                'flat_feats': np.array([total_pods, avg_cpu, avg_mem, total_traffic], dtype=np.float32),
+                'svc_df': padded_nodes,
+                'edge_df': padded_edges,
+                'global_feats': padded_global,
+                'node_mask': node_mask,
+                'edge_mask': edge_mask,
+                'num_nodes': num_active_nodes,
                 'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())
