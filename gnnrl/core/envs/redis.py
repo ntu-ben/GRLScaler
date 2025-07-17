@@ -120,7 +120,7 @@ class Redis(gym.Env):
             self.observation_space = spaces.Dict({
                 'svc_df': node_feat_space,
                 'node_df': spaces.Box(-np.inf, np.inf, shape=(1, 4), dtype=np.float32),
-                'edge_df': spaces.Box(-np.inf, np.inf, shape=(num_nodes * num_nodes, 6), dtype=np.float32),
+                'edge_df': spaces.Box(-np.inf, np.inf, shape=(num_nodes * num_nodes, 7), dtype=np.float32),
                 'flat_feats': spaces.Box(-np.inf, np.inf, shape=(4,), dtype=np.float32),
                 'invalid_action_mask': spaces.Box(0, 1, shape=(num_nodes * self.num_actions,), dtype=np.float32),
             })
@@ -168,6 +168,25 @@ class Redis(gym.Env):
             self.df = pd.DataFrame()
 
     def _fetch_service_graph(self):
+        # In simulation mode, return default graph structure
+        if not self.k8s:
+            num = len(DEPLOYMENTS)
+            adj = np.zeros((num, num), dtype=np.float32)
+            # Create simple connection: master -> slave
+            adj[0, 1] = 1.0
+            
+            max_edges = num * num
+            edges = []
+            # Add default edge: master -> slave with default metrics
+            edges.append([0, 1, 1.0, 100.0, 1.0, 0.01, 0])  # src, dst, connection, qps, p95, err_rate, unused
+            
+            while len(edges) < max_edges:
+                edges.append([0, 0, 0, 0, 0, 0, 0])
+            edges = np.array(edges[:max_edges], dtype=np.float32)
+            
+            return adj, edges
+        
+        # K8s mode: fetch real service graph
         from gnnrl.core.utils.kiali_client import fetch_service_graph
 
         nodes, edge_df = fetch_service_graph(namespace="redis")
@@ -177,13 +196,14 @@ class Redis(gym.Env):
         edges = []
 
         for _, row in edge_df.iterrows():
-            src_name = nodes[row["src"]]
-            dst_name = nodes[row["dst"]]
-            if src_name in index and dst_name in index:
-                s = index[src_name]
-                d = index[dst_name]
-                adj[s, d] = 1.0
-                edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], 0])
+            if len(nodes) > row["src"] and len(nodes) > row["dst"]:
+                src_name = nodes[row["src"]]
+                dst_name = nodes[row["dst"]]
+                if src_name in index and dst_name in index:
+                    s = index[src_name]
+                    d = index[dst_name]
+                    adj[s, d] = 1.0
+                    edges.append([s, d, 1.0, row["qps"], row["p95"], row["err_rate"], 0])
 
         max_edges = num * num
         while len(edges) < max_edges:
@@ -234,8 +254,16 @@ class Redis(gym.Env):
 
         # Print Step and Total Reward
         # if self.current_step == MAX_STEPS:
-        logging.info('[Step {}] | Action (Deployment): {} | Action (Move): {} | Reward: {} | Total Reward: {}'.format(
-            self.current_step, DEPLOYMENTS[action[0]], MOVES[action[1]], reward, self.total_reward))
+        # Log action for each deployment safely
+        action_desc = []
+        for i, act in enumerate(action):
+            if i < len(DEPLOYMENTS) and act < len(MOVES):
+                action_desc.append(f"{DEPLOYMENTS[i]}:{MOVES[act]}")
+            else:
+                action_desc.append(f"Service{i}:Action{act}")
+        
+        logging.info('[Step {}] | Actions: {} | Reward: {} | Total Reward: {}'.format(
+            self.current_step, ', '.join(action_desc), reward, self.total_reward))
 
         ob = self.get_state()
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -496,13 +524,28 @@ class Redis(gym.Env):
     def simulation_update(self):
         if self.current_step == 1:
             # Get a random sample!
+            if len(self.df) == 0:
+                # If DataFrame is empty, use default values
+                self.deploymentList[0].num_pods = 1
+                self.deploymentList[0].num_previous_pods = 1
+                self.deploymentList[1].num_pods = 1
+                self.deploymentList[1].num_previous_pods = 1
+                return
+            
             sample = self.df.sample()
             # print(sample)
 
-            self.deploymentList[0].num_pods = int(sample['redis-leader_num_pods'].values[0])
-            self.deploymentList[0].num_previous_pods = int(sample['redis-leader_num_pods'].values[0])
-            self.deploymentList[1].num_pods = int(sample['redis-follower_num_pods'].values[0])
-            self.deploymentList[1].num_previous_pods = int(sample['redis-follower_num_pods'].values[0])
+            if len(sample) > 0:
+                self.deploymentList[0].num_pods = int(sample['redis-leader_num_pods'].values[0])
+                self.deploymentList[0].num_previous_pods = int(sample['redis-leader_num_pods'].values[0])
+                self.deploymentList[1].num_pods = int(sample['redis-follower_num_pods'].values[0])
+                self.deploymentList[1].num_previous_pods = int(sample['redis-follower_num_pods'].values[0])
+            else:
+                # Fallback to default values
+                self.deploymentList[0].num_pods = 1
+                self.deploymentList[0].num_previous_pods = 1
+                self.deploymentList[1].num_pods = 1
+                self.deploymentList[1].num_previous_pods = 1
 
         else:
             leader_pods = self.deploymentList[0].num_pods
@@ -530,20 +573,34 @@ class Redis(gym.Env):
             if data.size == 0:
                 data = self.df.loc[self.df['redis-follower_num_pods'] == follower_pods]
 
-            sample = data.sample()
+            if len(data) > 0:
+                sample = data.sample()
+            else:
+                # Fallback: use random sample from full dataset
+                sample = self.df.sample() if len(self.df) > 0 else None
             # print(sample)
 
-        self.deploymentList[0].cpu_usage = int(sample['redis-leader_cpu_usage'].values[0])
-        self.deploymentList[0].mem_usage = int(sample['redis-leader_mem_usage'].values[0])
-        self.deploymentList[0].received_traffic = int(sample['redis-leader_traffic_in'].values[0])
-        self.deploymentList[0].transmit_traffic = int(sample['redis-leader_traffic_out'].values[0])
-        self.deploymentList[0].latency = float(sample['redis-leader_latency'].values[0])
+        # Update deployment metrics with bounds checking
+        if sample is not None and len(sample) > 0:
+            self.deploymentList[0].cpu_usage = int(sample['redis-leader_cpu_usage'].values[0])
+            self.deploymentList[0].mem_usage = int(sample['redis-leader_mem_usage'].values[0])
+            self.deploymentList[0].received_traffic = int(sample['redis-leader_traffic_in'].values[0])
+            self.deploymentList[0].transmit_traffic = int(sample['redis-leader_traffic_out'].values[0])
+            self.deploymentList[0].latency = float(sample['redis-leader_latency'].values[0])
 
-        self.deploymentList[1].cpu_usage = int(sample['redis-follower_cpu_usage'].values[0])
-        self.deploymentList[1].mem_usage = int(sample['redis-follower_mem_usage'].values[0])
-        self.deploymentList[1].received_traffic = int(sample['redis-follower_traffic_in'].values[0])
-        self.deploymentList[1].transmit_traffic = int(sample['redis-follower_traffic_out'].values[0])
-        self.deploymentList[1].latency = float(sample['redis-follower_latency'].values[0])
+            self.deploymentList[1].cpu_usage = int(sample['redis-follower_cpu_usage'].values[0])
+            self.deploymentList[1].mem_usage = int(sample['redis-follower_mem_usage'].values[0])
+            self.deploymentList[1].received_traffic = int(sample['redis-follower_traffic_in'].values[0])
+            self.deploymentList[1].transmit_traffic = int(sample['redis-follower_traffic_out'].values[0])
+            self.deploymentList[1].latency = float(sample['redis-follower_latency'].values[0])
+        else:
+            # Use default values when no data is available
+            for i in range(2):
+                self.deploymentList[i].cpu_usage = 50
+                self.deploymentList[i].mem_usage = 50
+                self.deploymentList[i].received_traffic = 100
+                self.deploymentList[i].transmit_traffic = 100
+                self.deploymentList[i].latency = 1.0
 
         for d in self.deploymentList:
             # Update Desired replicas

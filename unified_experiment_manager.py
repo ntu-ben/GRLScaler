@@ -28,6 +28,7 @@
 
 import os
 import sys
+from pod_monitor import MultiPodMonitor, create_pod_monitor_for_experiment
 import yaml
 import argparse
 import logging
@@ -100,7 +101,7 @@ class UnifiedExperimentManager:
     def _setup_hpa_configurations(self):
         """設定 HPA 配置選項"""
         self.hpa_configs = {
-            'cpu': ['cpu-40'],  # 只測試 CPU-40% 配置
+            'cpu': ['cpu-20', 'cpu-40', 'cpu-60', 'cpu-80'],  # 測試4種CPU配置
             'mem': ['mem-40', 'mem-80'],
             'hybrid': [
                 'cpu-20-mem-40', 'cpu-20-mem-80',
@@ -337,10 +338,19 @@ class UnifiedExperimentManager:
             training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gym-hpa")
             self.logger.info(f"🧪 Gym-HPA 測試已開始，立即開始並行負載測試...")
         
-        # 運行持續負載測試
-        scenario_dirs = self.run_continuous_loadtest(
-            "gym-hpa", run_tag, kwargs.get('seed', 42), training_proc
-        )
+        # 根據測試/訓練模式選擇負載測試策略
+        if kwargs.get('testing', False):
+            # 測試模式：使用固定4場景評估性能
+            self.logger.info("🧪 測試模式：執行固定4個場景")
+            scenario_dirs = self.run_fixed_hpa_loadtest(
+                "gym-hpa", run_tag, kwargs.get('seed', 42)
+            )
+        else:
+            # 訓練模式：使用隨機場景提高泛化能力
+            self.logger.info("🎯 訓練模式：使用隨機場景壓測")
+            scenario_dirs = self.run_continuous_loadtest(
+                "gym-hpa", run_tag, kwargs.get('seed', 42), training_proc
+            )
         
         return len(scenario_dirs) > 0
     
@@ -406,25 +416,41 @@ class UnifiedExperimentManager:
             ])
             
             self.logger.info(f"📂 載入模型檔案: {load_path}")
-            # 測試模式：執行測試腳本後進行負載測試
-            training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
-            self.logger.info(f"🔄 GNNRL 測試進程已開始...")
-            
-            # 等待測試完成後再執行固定場景測試
-            training_proc.wait()
-            
-            # 測試模式：使用固定的4個場景測試（與K8s-HPA相同）
+            # 測試模式：同步執行GNNRL測試和負載測試
             self.logger.info("🧪 GNNRL 測試模式：執行固定4個場景測試")
+            
+            # 先啟動負載測試，再啟動GNNRL測試進程
+            import threading
+            
+            def run_gnnrl_testing():
+                training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
+                self.logger.info(f"🔄 GNNRL 測試進程已開始...")
+                training_proc.wait()
+                self.logger.info(f"✅ GNNRL 測試進程已完成")
+            
+            # 在后台启动GNNRL测试
+            gnnrl_thread = threading.Thread(target=run_gnnrl_testing)
+            gnnrl_thread.daemon = True
+            gnnrl_thread.start()
+            
+            # 等待GNNRL进程初始化（3秒）
+            time.sleep(3)
+            
+            # 立即开始负载测试场景
             scenario_dirs = self.run_fixed_hpa_loadtest(
                 "gnnrl", run_tag, kwargs.get('seed', 42)
             )
+            
+            # 等待GNNRL测试完全结束
+            gnnrl_thread.join()
         else:
             # 訓練模式：啟動 GNNRL 訓練進程
             self.logger.info("🎯 使用訓練模式")
             training_proc = subprocess.Popen(cmd, cwd=self.repo_root / "gnnrl")
-            self.logger.info(f"🔄 GNNRL 訓練已開始，繼續負載測試...")
+            self.logger.info(f"🔄 GNNRL 訓練已開始，開始隨機場景壓測...")
             
-            # 訓練模式：運行持續負載測試
+            # 訓練模式：始終使用隨機場景壓測直到訓練完成
+            # 忽略 stable_loadtest 參數，因為訓練需要隨機場景來學習不同負載模式
             scenario_dirs = self.run_continuous_loadtest(
                 "gnnrl", run_tag, kwargs.get('seed', 42), training_proc
             )
@@ -491,10 +517,87 @@ class UnifiedExperimentManager:
             self.logger.info(f"✅ Kiali 圖表已保存: {kiali_file}")
         except Exception as err:
             self.logger.warning(f"⚠️ Kiali 圖表記錄失敗: {err}")
+    
+    def _setup_pod_monitoring(self, scenario: str, out_dir: Path) -> Optional[MultiPodMonitor]:
+        """設置Pod監控
+        
+        Args:
+            scenario: 當前場景名稱
+            out_dir: 輸出目錄
+            
+        Returns:
+            配置好的Pod監控器，如果設置失敗則返回None
+        """
+        try:
+            # 確定實驗類型 (從輸出路徑推斷)
+            experiment_type = "unknown"
+            if "gnnrl" in str(out_dir):
+                experiment_type = "gnnrl"
+            elif "gym-hpa" in str(out_dir) or "gym_hpa" in str(out_dir):
+                experiment_type = "gym-hpa"
+            elif "k8s-hpa" in str(out_dir) or "k8s_hpa" in str(out_dir):
+                experiment_type = "k8s-hpa"
+            
+            # 設置Pod監控輸出目錄
+            pod_monitoring_dir = out_dir / "pod_metrics"
+            
+            # 確定要監控的namespace列表
+            namespaces_to_monitor = []
+            
+            # 根據當前使用的namespace添加監控
+            if self.namespace:
+                namespaces_to_monitor.append(self.namespace)
+            
+            # 如果是OnlineBoutique環境，也監控redis和default namespace（如果存在）
+            if self.namespace == 'onlineboutique':
+                # 檢查redis namespace是否存在
+                try:
+                    result = subprocess.run([
+                        'kubectl', 'get', 'namespace', 'redis'
+                    ], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        namespaces_to_monitor.append('redis')
+                except Exception:
+                    pass
+            
+            # 如果是Redis環境，也監控onlineboutique namespace（如果存在）
+            elif self.namespace == 'redis':
+                try:
+                    result = subprocess.run([
+                        'kubectl', 'get', 'namespace', 'onlineboutique'
+                    ], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        namespaces_to_monitor.append('onlineboutique')
+                except Exception:
+                    pass
+            
+            if not namespaces_to_monitor:
+                self.logger.warning("⚠️ 未找到可監控的namespace")
+                return None
+            
+            # 創建Pod監控器
+            pod_monitor = create_pod_monitor_for_experiment(
+                experiment_type=experiment_type,
+                scenario=scenario,
+                namespaces=namespaces_to_monitor,
+                output_dir=pod_monitoring_dir
+            )
+            
+            self.logger.info(f"✅ Pod監控已設置 - 實驗類型: {experiment_type}, 場景: {scenario}, Namespaces: {namespaces_to_monitor}")
+            return pod_monitor
+            
+        except Exception as e:
+            self.logger.error(f"❌ Pod監控設置失敗: {e}")
+            return None
 
     def run_distributed_locust(self, scenario: str, tag: str, out_dir: Path) -> bool:
         """運行分散式 Locust 測試"""
         out_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 在負載測試前重置 Pod 數量
+        self.logger.info(f"🔄 場景 {scenario} 測試前重置 Pod 數量")
+        if not self._reset_all_namespaces_pods():
+            self.logger.warning("⚠️ Pod 重置失敗，但繼續進行負載測試")
         
         if self.m1_host:
             return self._run_remote_locust(scenario, tag, out_dir)
@@ -524,6 +627,11 @@ class UnifiedExperimentManager:
             # 記錄開始狀態
             self.record_kiali_graph("start")
             
+            # 啟動Pod監控
+            pod_monitor = self._setup_pod_monitoring(scenario, out_dir)
+            if pod_monitor:
+                pod_monitor.start_all_monitoring(15)  # 15分鐘監控
+            
             # 中途檢查點
             time.sleep(self.half_run_sec)
             self.record_kiali_graph("mid")
@@ -548,6 +656,10 @@ class UnifiedExperimentManager:
                 return False
                 
             self.record_kiali_graph("end")
+            
+            # 停止Pod監控
+            if pod_monitor:
+                pod_monitor.stop_all_monitoring()
             
             # 下載結果檔案
             downloaded_files = []
@@ -620,6 +732,12 @@ class UnifiedExperimentManager:
         proc = subprocess.Popen(cmd, env=env)
         
         self.record_kiali_graph("start")
+        
+        # 啟動Pod監控
+        pod_monitor = self._setup_pod_monitoring(scenario, out_dir)
+        if pod_monitor:
+            pod_monitor.start_all_monitoring(15)  # 15分鐘監控
+        
         time.sleep(self.half_run_sec)
         self.record_kiali_graph("mid")
         
@@ -627,6 +745,10 @@ class UnifiedExperimentManager:
         proc.wait()
         
         self.record_kiali_graph("end")
+        
+        # 停止Pod監控
+        if pod_monitor:
+            pod_monitor.stop_all_monitoring()
         
         if proc.returncode:
             self.logger.warning(f"⚠️ 本地測試 {scenario} 結束碼: {proc.returncode}")
@@ -693,47 +815,19 @@ class UnifiedExperimentManager:
 
     def run_fixed_hpa_loadtest(self, experiment_type: str, run_tag: str, seed: int) -> List[Path]:
         """運行固定的 4 個場景序列（用於基準測試和公平比較）"""
-        # 生成固定的場景序列（基於 seed）
+        # 測試模式：執行所有 4 個場景，使用 seed 來決定執行順序
         random.seed(seed)
         scenario_list = list(self.scenarios.keys())
         
-        # 檢查是否已經有保存的序列
-        sequence_file = self.repo_root / "logs" / "hpa_scenario_sequence.txt"
-        
-        if sequence_file.exists():
-            # 讀取已保存的序列
-            with open(sequence_file, 'r') as f:
-                saved_sequences = {}
-                for line in f:
-                    if line.strip():
-                        parts = line.strip().split(':')
-                        if len(parts) == 2:
-                            saved_seed, saved_sequence = parts
-                            saved_sequences[int(saved_seed)] = saved_sequence.split(',')
-            
-            if seed in saved_sequences:
-                fixed_sequence = saved_sequences[seed]
-                self.logger.info(f"📋 使用已保存的固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
-            else:
-                # 生成新序列並保存
-                fixed_sequence = random.choices(scenario_list, k=4)
-                saved_sequences[seed] = fixed_sequence
-                
-                # 保存更新的序列
-                with open(sequence_file, 'w') as f:
-                    for s, seq in saved_sequences.items():
-                        f.write(f"{s}:{','.join(seq)}\n")
-                
-                self.logger.info(f"📋 生成並保存新的固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
+        # 測試模式應該執行所有場景，只是順序根據 seed 決定
+        if len(scenario_list) >= 4:
+            fixed_sequence = scenario_list.copy()
+            random.shuffle(fixed_sequence)  # 順序隨機化，但包含所有場景
         else:
-            # 首次運行，生成並保存序列
-            fixed_sequence = random.choices(scenario_list, k=4)
-            sequence_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(sequence_file, 'w') as f:
-                f.write(f"{seed}:{','.join(fixed_sequence)}\n")
-            
-            self.logger.info(f"📋 首次生成固定測試序列 (seed {seed}): {', '.join(fixed_sequence)}")
+            # 如果場景少於4個，就全部使用
+            fixed_sequence = scenario_list
+        
+        self.logger.info(f"📋 測試模式：執行所有 {len(fixed_sequence)} 個場景 (順序 seed {seed}): {', '.join(fixed_sequence)}")
         
         # 創建基礎輸出目錄
         base_output_dir = self.repo_root / "logs" / experiment_type / run_tag
@@ -846,30 +940,101 @@ class UnifiedExperimentManager:
             if seed in saved_sequences:
                 return saved_sequences[seed]
                 
-        # 生成新序列
-        fixed_sequence = random.choices(scenario_list, k=4)
-        
-        # 保存序列
-        sequence_file.parent.mkdir(parents=True, exist_ok=True)
-        saved_sequences = {}
-        
-        if sequence_file.exists():
-            with open(sequence_file, 'r') as f:
-                for line in f:
-                    if line.strip():
-                        parts = line.strip().split(':')
-                        if len(parts) == 2:
-                            saved_seed, saved_sequence = parts
-                            saved_sequences[int(saved_seed)] = saved_sequence.split(',')
-        
-        saved_sequences[seed] = fixed_sequence
-        
-        with open(sequence_file, 'w') as f:
-            for s, seq in saved_sequences.items():
-                f.write(f"{s}:{','.join(seq)}\n")
+        # 生成新序列（確保四個場景不重複）
+        if len(scenario_list) >= 4:
+            fixed_sequence = random.sample(scenario_list, 4)
+        else:
+            # 如果場景少於4個，就全部使用
+            fixed_sequence = scenario_list
                 
         return fixed_sequence
     
+    def _reset_pod_replicas(self, target_namespace: str = None) -> bool:
+        """重置指定 namespace 所有 deployment 的 replica 數量為 1
+        
+        Args:
+            target_namespace: 目標 namespace，如果為 None 則使用當前 namespace
+        """
+        namespace = target_namespace or self.namespace
+        self.logger.info(f"🔄 重置 {namespace} namespace 所有 Pod 數量到預設值 (1 replica)")
+        
+        try:
+            # 獲取所有 deployment
+            result = subprocess.run(
+                ["kubectl", "get", "deployments", "-n", namespace, "-o", "name"],
+                capture_output=True, text=True, timeout=30
+            )
+            
+            if result.returncode != 0:
+                self.logger.error(f"❌ 獲取 {namespace} deployment 列表失敗: {result.stderr}")
+                return False
+            
+            deployments = [line.strip() for line in result.stdout.split('\n') if line.strip()]
+            
+            if not deployments:
+                self.logger.warning(f"⚠️ 在 namespace {namespace} 中未找到 deployment")
+                return True
+            
+            # 重置每個 deployment 的 replicas 為 1
+            reset_count = 0
+            for deployment in deployments:
+                scale_result = subprocess.run(
+                    ["kubectl", "scale", deployment, "--replicas=1", "-n", namespace],
+                    capture_output=True, text=True, timeout=30
+                )
+                
+                if scale_result.returncode == 0:
+                    reset_count += 1
+                    deployment_name = deployment.replace('deployment.apps/', '')
+                    self.logger.info(f"✅ 重置 {namespace}/{deployment_name} 為 1 replica")
+                else:
+                    deployment_name = deployment.replace('deployment.apps/', '')
+                    self.logger.warning(f"⚠️ 重置 {namespace}/{deployment_name} 失敗: {scale_result.stderr}")
+            
+            self.logger.info(f"🏁 完成 {namespace} Pod 重置，成功重置 {reset_count}/{len(deployments)} 個 deployment")
+            
+            # 等待 Pod 調整完成
+            self.logger.info("⏳ 等待 Pod 重置生效 (30秒)...")
+            time.sleep(30)
+            
+            return reset_count > 0
+            
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"❌ {namespace} Pod 重置操作超時")
+            return False
+        except Exception as e:
+            self.logger.error(f"❌ {namespace} Pod 重置發生錯誤: {e}")
+            return False
+
+    def _reset_all_namespaces_pods(self) -> bool:
+        """重置所有相關 namespace 的 Pod 數量"""
+        self.logger.info("🔄 重置所有 namespace 的 Pod 數量")
+        
+        namespaces_to_reset = []
+        
+        # 根據當前應用場景確定要重置的 namespace
+        if hasattr(self, 'use_case'):
+            if self.use_case == 'redis':
+                namespaces_to_reset.append(self.redis_namespace)
+            elif self.use_case == 'online_boutique':
+                namespaces_to_reset.append(self.namespace)
+            else:
+                # 未知場景，重置兩個都重置
+                namespaces_to_reset.extend([self.namespace, self.redis_namespace])
+        else:
+            # 沒有 use_case 資訊，根據當前 namespace 判斷
+            if self.namespace == 'redis':
+                namespaces_to_reset.append(self.redis_namespace)
+            else:
+                namespaces_to_reset.append(self.namespace)
+        
+        reset_success = True
+        for ns in namespaces_to_reset:
+            if not self._reset_pod_replicas(ns):
+                reset_success = False
+                
+        return reset_success
+
     def _apply_hpa_config(self, config_name: str) -> bool:
         """應用指定HPA配置"""
         config_dir = self.hpa_root / config_name
@@ -886,6 +1051,10 @@ class UnifiedExperimentManager:
                 ["kubectl", "delete", "hpa", "--all", "-n", self.namespace],
                 capture_output=True, text=True, timeout=30
             )
+            
+            # 重置所有 Pod 數量為 1
+            if not self._reset_all_namespaces_pods():
+                self.logger.warning("⚠️ Pod 重置失敗，但繼續應用 HPA 配置")
             
             # 應用新的HPA配置
             for hpa_file in config_dir.glob("*.yaml"):

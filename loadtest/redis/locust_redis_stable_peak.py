@@ -52,20 +52,21 @@ class StableRedisUser(HttpUser):
         try:
             result = self.redis_client.get(key)
             # 使用 HTTP 格式記錄，方便 Locust 統計
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_GET",
                 name=f"GET {key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(str(result)) if result else 0,
+                exception=None,
             )
             self.request_count += 1
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_GET",
                 name=f"GET {key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
             self.failure_count += 1
             logging.warning(f"Redis GET 失敗: {e}, 但繼續測試")
@@ -79,20 +80,21 @@ class StableRedisUser(HttpUser):
         
         try:
             self.redis_client.set(key, value, ex=300)  # 5分鐘過期
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_SET",
                 name=f"SET {key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(value),
+                exception=None,
             )
             self.request_count += 1
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_SET",
                 name=f"SET {key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
             self.failure_count += 1
             logging.warning(f"Redis SET 失敗: {e}, 但繼續測試")
@@ -113,20 +115,21 @@ class StableRedisUser(HttpUser):
                 result = self.redis_client.rpop(list_key)
                 operation = "RPOP"
                 
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type=f"REDIS_{operation}",
                 name=f"{operation} {list_key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(value),
+                exception=None,
             )
             self.request_count += 1
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_LIST",
                 name=f"LIST {list_key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
             self.failure_count += 1
             logging.warning(f"Redis LIST 操作失敗: {e}, 但繼續測試")
@@ -147,20 +150,21 @@ class StableRedisUser(HttpUser):
                 result = self.redis_client.hget(hash_key, field)
                 operation = "HGET"
                 
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type=f"REDIS_{operation}",
                 name=f"{operation} {hash_key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(value),
+                exception=None,
             )
             self.request_count += 1
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_HASH",
                 name=f"HASH {hash_key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
             self.failure_count += 1
             logging.warning(f"Redis HASH 操作失敗: {e}, 但繼續測試")

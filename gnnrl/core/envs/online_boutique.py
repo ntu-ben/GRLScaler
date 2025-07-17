@@ -122,7 +122,11 @@ class OnlineBoutique(gym.Env):
         self.num_actions = 15
 
         # Multi-Discrete - output an action for each service simultaneously
-        num_services = len(DEPLOYMENTS)
+        if self.use_graph:
+            # 動態圖模式：使用最大節點數
+            num_services = self.dynamic_graph.config.max_nodes
+        else:
+            num_services = len(DEPLOYMENTS)
         self.action_space = spaces.MultiDiscrete([self.num_actions] * num_services)
 
         # Observations: 22 Metrics! -> 2 * 11 = 22
@@ -578,28 +582,53 @@ class OnlineBoutique(gym.Env):
 
             return {
                 'svc_df': padded_nodes,
+                'node_df': np.zeros((1, 4), dtype=np.float32),  # 添加兼容的 node_df
                 'edge_df': padded_edges,
-                'global_feats': padded_global,
+                'flat_feats': padded_global,  # 改名為 flat_feats 以匹配觀察空間
                 'node_mask': node_mask,
                 'edge_mask': edge_mask,
-                'num_nodes': num_active_nodes,
                 'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())
 
     def _invalid_action_mask(self):
-        mask = []
-        for d in self.deploymentList:
-            for action in range(self.num_actions):
-                if action == ACTION_DO_NOTHING:
-                    mask.append(1)
-                elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
-                    n = action
-                    mask.append(1 if d.num_pods + n <= d.max_pods else 0)
-                else:
-                    n = action - 7
-                    mask.append(1 if d.num_pods - n >= d.min_pods else 0)
-        return np.array(mask, dtype=np.float32)
+        if self.use_graph:
+            # 動態圖模式：填充到最大節點數
+            max_nodes = self.dynamic_graph.config.max_nodes
+            mask = []
+            
+            # 為活躍服務生成遮罩
+            for d in self.deploymentList:
+                for action in range(self.num_actions):
+                    if action == ACTION_DO_NOTHING:
+                        mask.append(1)
+                    elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                        n = action
+                        mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                    else:
+                        n = action - 7
+                        mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+            
+            # 填充到最大節點數（非活躍節點的所有動作都無效）
+            current_size = len(self.deploymentList) * self.num_actions
+            padding_size = max_nodes * self.num_actions - current_size
+            mask.extend([0] * padding_size)  # 非活躍節點的動作無效
+            
+            return np.array(mask, dtype=np.float32)
+        else:
+            # 非圖模式：原有邏輯
+            mask = []
+            for d in self.deploymentList:
+                for action in range(self.num_actions):
+                    if action == ACTION_DO_NOTHING:
+                        mask.append(1)
+                    elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                        n = action
+                        mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                    else:
+                        n = action - 7
+                        mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+            return np.array(mask, dtype=np.float32)
 
     def get_observation_space(self):
             return spaces.Box(

@@ -37,7 +37,7 @@ def test_environment_creation():
         logger.info("✓ Environment created successfully")
         
         # Test reset
-        obs = env.reset()
+        obs, info = env.reset()  # reset() 返回 (obs, info) tuple
         logger.info(f"✓ Environment reset successful")
         logger.info(f"Observation keys: {obs.keys()}")
         
@@ -77,7 +77,7 @@ def test_gnn_policy():
         # Create environment to get observation/action spaces  
         dataset_path = str(Path(__file__).parent.parent / "data/datasets/real/onlineboutique/v1/online_boutique_gym_observation.csv")
         env = OnlineBoutique(k8s=False, use_graph=True, dataset_path=dataset_path)
-        obs = env.reset()
+        obs, info = env.reset()  # reset() 返回 (obs, info) tuple
         
         # Create dummy metadata
         metadata = (
@@ -120,7 +120,7 @@ def test_gnn_policy():
                     obs_tensor[key] = obs_tensor[key].unsqueeze(0)
         
         logits, values = policy.forward(obs_tensor)
-        logger.info(f"✓ Forward pass successful - logits shape: {logits.shape}, values shape: {values.shape}")
+        logger.info(f"✓ Forward pass successful - logits type: {type(logits)}, values shape: {values.shape}")
         
         env.close()
         return True

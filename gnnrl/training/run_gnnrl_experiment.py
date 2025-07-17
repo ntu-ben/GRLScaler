@@ -486,7 +486,7 @@ def run_experiment(args):
                 total_steps = 0
                 
                 for episode in range(num_episodes):
-                    obs = env.reset()
+                    obs, info = env.reset()
                     episode_reward = 0
                     episode_steps = 0
                     done = False
@@ -495,7 +495,8 @@ def run_experiment(args):
                     
                     while not done and episode_steps < 1000:  # Limit episode length
                         action, _ = model.predict(obs, deterministic=True)
-                        obs, reward, done, info = env.step(action)
+                        obs, reward, done, truncated, info = env.step(action)
+                        done = done or truncated
                         episode_reward += reward
                         episode_steps += 1
                     
@@ -539,7 +540,8 @@ def run_experiment(args):
             callbacks.append(checkpoint_callback)
             
             # Graph visualization callback (every 500 steps)
-            if HAS_GRAPH_VIZ and args.use_graph:
+            # GNNRL always uses graph mode, so enable if available
+            if HAS_GRAPH_VIZ:
                 graph_viz_dir = Path(args.log_dir) / "graph_visualizations"
                 graph_viz_callback = GraphVisualizationCallback(
                     save_freq=500,
@@ -548,7 +550,7 @@ def run_experiment(args):
                 )
                 callbacks.append(graph_viz_callback)
                 logger.info("✅ Graph visualization callback enabled (every 500 steps)")
-            elif not HAS_GRAPH_VIZ and args.use_graph:
+            else:
                 logger.warning("⚠️ Graph visualization callback not available - missing dependencies")
             
             callback_list = CallbackList(callbacks)
@@ -575,7 +577,7 @@ def run_experiment(args):
                 # Save final model to unified logs directory
                 model_dir = Path(__file__).parent.parent.parent / "logs" / "models"
                 model_dir.mkdir(parents=True, exist_ok=True)
-                model_filename = f"gnnrl_{args.model}_{args.goal}_k8s_{args.k8s}_steps_{args.steps}.zip"
+                model_filename = f"gnnrl_{args.model}_{args.use_case}_{args.goal}_k8s_{args.k8s}_steps_{args.steps}.zip"
                 model_path = model_dir / model_filename
                 model.save(str(model_path))
                 logger.info(f"📁 Model saved as: {model_path}")
@@ -616,7 +618,9 @@ def main():
         logger.info("🛑 Experiment interrupted by user")
         return 130
     except Exception as e:
+        import traceback
         logger.error(f"💥 Unexpected error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return 1
 
 if __name__ == "__main__":

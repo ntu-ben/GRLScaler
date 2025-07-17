@@ -39,19 +39,20 @@ class RedisOffPeakUser(HttpUser):
         
         try:
             result = self.redis_client.get(key)
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_GET",
                 name=f"GET {key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(str(result)) if result else 0,
+                exception=None,
             )
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_GET",
                 name=f"GET {key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
     
     @task(30)
@@ -63,19 +64,20 @@ class RedisOffPeakUser(HttpUser):
         
         try:
             self.redis_client.set(key, value, ex=600)  # 10分鐘過期
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_SET",
                 name=f"SET {key}",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(value),
+                exception=None,
             )
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_SET",
                 name=f"SET {key}",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
     
     @task(20)
@@ -86,19 +88,20 @@ class RedisOffPeakUser(HttpUser):
         try:
             # 簡單的 INFO 命令
             info = self.redis_client.info('memory')
-            self.environment.events.request_success.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_INFO",
                 name="INFO memory",
                 response_time=(time.time() - start_time) * 1000,
                 response_length=len(str(info)),
+                exception=None,
             )
         except Exception as e:
-            self.environment.events.request_failure.fire(
+            self.environment.events.request.fire(
                 request_type="REDIS_INFO",
                 name="INFO memory",
                 response_time=(time.time() - start_time) * 1000,
-                exception=e,
                 response_length=0,
+                exception=e,
             )
 
 # 配置用戶負載

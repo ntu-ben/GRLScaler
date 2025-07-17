@@ -1,1 +1,0 @@
-42:peak,offpeak,rushsale,offpeak

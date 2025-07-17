@@ -1,0 +1,37 @@
+{
+  "生成時間": "2025-07-14 15:55:35",
+  "生成文件數量": 16,
+  "應用場景": [
+    "redis",
+    "onlineboutique"
+  ],
+  "壓測場景": [
+    "offpeak",
+    "rushsale",
+    "peak",
+    "fluctuating"
+  ],
+  "對比方法": [
+    "GNNRL",
+    "Gym-HPA",
+    "K8s-HPA"
+  ],
+  "生成文件列表": [
+    "redis_offpeak_pods.png",
+    "redis_offpeak_rps.png",
+    "redis_rushsale_pods.png",
+    "redis_rushsale_rps.png",
+    "redis_peak_pods.png",
+    "redis_peak_rps.png",
+    "redis_fluctuating_pods.png",
+    "redis_fluctuating_rps.png",
+    "onlineboutique_offpeak_pods.png",
+    "onlineboutique_offpeak_rps.png",
+    "onlineboutique_rushsale_pods.png",
+    "onlineboutique_rushsale_rps.png",
+    "onlineboutique_peak_pods.png",
+    "onlineboutique_peak_rps.png",
+    "onlineboutique_fluctuating_pods.png",
+    "onlineboutique_fluctuating_rps.png"
+  ]
+}

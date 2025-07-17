@@ -95,6 +95,7 @@ def run_redis_experiment(args):
     
     runner = RedisExperimentRunner(
         use_standardized_scenarios=args.standardized,
+        algorithm=args.algorithm,
         stable_loadtest=args.stable_loadtest,
         max_rps=args.max_rps,
         loadtest_timeout=args.loadtest_timeout

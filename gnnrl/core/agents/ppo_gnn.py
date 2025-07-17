@@ -73,12 +73,22 @@ class GNNPPOPolicy(ActorCriticPolicy):
         }
         g_emb = self.gnn_encoder(graph_obs)
         flat = torch.as_tensor(obs["flat_feats"], dtype=torch.float32, device=g_emb.device)
+        
+        # Ensure both tensors have the same batch dimension
         if flat.dim() == 1:
             flat = flat.unsqueeze(0)
+        
+        # Match batch sizes
+        if g_emb.shape[0] != flat.shape[0]:
+            if g_emb.shape[0] == 1 and flat.shape[0] > 1:
+                g_emb = g_emb.expand(flat.shape[0], -1)
+            elif flat.shape[0] == 1 and g_emb.shape[0] > 1:
+                flat = flat.expand(g_emb.shape[0], -1)
+        
         return torch.cat([g_emb, flat], dim=-1)
 
     def forward(self, obs: Dict[str, torch.Tensor], deterministic: bool = False):
-        """Forward pass to get action distribution and value."""
+        """Forward pass to get actions, values, and log probabilities."""
         features = self._get_features(obs)
         latent = self.mlp_extractor(features)
         
@@ -97,31 +107,67 @@ class GNNPPOPolicy(ActorCriticPolicy):
         distribution = MultiCategoricalDistribution(self.action_dims)
         distribution = distribution.proba_distribution(action_logits=torch.cat(split_logits, dim=-1))
         
+        # Sample actions
+        actions = distribution.get_actions(deterministic=deterministic)
+        log_prob = distribution.log_prob(actions)
+        
         # Get values
         values = self.value_net(latent)
         
-        return distribution, values
+        return actions, values, log_prob
 
     def _predict(self, observation: Dict[str, torch.Tensor], deterministic: bool = False) -> torch.Tensor:
         """Predict actions from observations."""
-        distribution, _ = self.forward(observation, deterministic)
-        return distribution.get_actions(deterministic=deterministic)
+        actions, _, _ = self.forward(observation, deterministic)
+        return actions
     
     def evaluate_actions(self, obs: Dict[str, torch.Tensor], actions: torch.Tensor):
         """Evaluate actions according to the current policy."""
-        distribution, values = self.forward(obs)
+        features = self._get_features(obs)
+        latent = self.mlp_extractor(features)
+        
+        # Get action distribution
+        logits = self.action_net(latent)
+        if "invalid_action_mask" in obs:
+            logits = logits + (obs["invalid_action_mask"].to(logits.device) - 1) * 1e10
+        
+        # Create distribution for MultiDiscrete action space
+        from stable_baselines3.common.distributions import MultiCategoricalDistribution
+        split_logits = torch.split(logits, self.action_dims.tolist(), dim=-1)
+        distribution = MultiCategoricalDistribution(self.action_dims)
+        distribution = distribution.proba_distribution(action_logits=torch.cat(split_logits, dim=-1))
+        
         log_prob = distribution.log_prob(actions)
         entropy = distribution.entropy()
+        
+        # Get values
+        values = self.value_net(latent)
+        
         return values.flatten(), log_prob, entropy
     
     def get_distribution(self, obs: Dict[str, torch.Tensor]):
         """Get action distribution for given observations."""
-        distribution, _ = self.forward(obs)
+        features = self._get_features(obs)
+        latent = self.mlp_extractor(features)
+        
+        # Get action distribution
+        logits = self.action_net(latent)
+        if "invalid_action_mask" in obs:
+            logits = logits + (obs["invalid_action_mask"].to(logits.device) - 1) * 1e10
+        
+        # Create distribution for MultiDiscrete action space
+        from stable_baselines3.common.distributions import MultiCategoricalDistribution
+        split_logits = torch.split(logits, self.action_dims.tolist(), dim=-1)
+        distribution = MultiCategoricalDistribution(self.action_dims)
+        distribution = distribution.proba_distribution(action_logits=torch.cat(split_logits, dim=-1))
+        
         return distribution
         
     def predict_values(self, obs: Dict[str, torch.Tensor]):
         """Get value estimates for given observations."""
-        _, values = self.forward(obs)
+        features = self._get_features(obs)
+        latent = self.mlp_extractor(features)
+        values = self.value_net(latent)
         return values.flatten()
 
 
