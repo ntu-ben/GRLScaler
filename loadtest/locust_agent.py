@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI(title="Locust Remote Agent")
 
@@ -36,10 +37,10 @@ class JobReq(BaseModel):
     target_host: str           # http://frontend.onlineboutique.svc.cluster.local
     run_time: str = "15m"
     stable_mode: bool = False  # 使用穩定loadtest模式
-    max_rps: int = None        # 最高RPS限制
+    max_rps: Optional[int] = None        # 最高RPS限制
     timeout: int = 30          # 請求超時時間
     environment: str = "onlineboutique"  # "onlineboutique" or "redis"
-    namespace: str = None      # kubernetes namespace (for auto-detection)
+    namespace: Optional[str] = None      # kubernetes namespace (for auto-detection)
 
 jobs = {}   # job_id -> {"path":…, "ret":returncode}
 
