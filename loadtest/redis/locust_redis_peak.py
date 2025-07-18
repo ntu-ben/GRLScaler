@@ -182,7 +182,7 @@ class RedisPeakShape(LoadTestShape):
         super().__init__()
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
-        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "300"))  # 固定300 RPS
+        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "800"))  # 固定800 RPS (Redis高性能)
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
         print(f"🔧 Redis Peak壓測配置:")

@@ -162,10 +162,10 @@ class FluctuatingShape(LoadTestShape):
         
         # 四階段RPS配置 [低峰, 中峰, 低峰, 高峰] - Redis版本
         self.phase_rps = [
-            int(os.getenv("LOCUST_PHASE1_RPS", "75")),   # 第1階段: 75 RPS
-            int(os.getenv("LOCUST_PHASE2_RPS", "200")),  # 第2階段: 200 RPS
-            int(os.getenv("LOCUST_PHASE3_RPS", "75")),   # 第3階段: 75 RPS
-            int(os.getenv("LOCUST_PHASE4_RPS", "400"))   # 第4階段: 400 RPS
+            int(os.getenv("LOCUST_PHASE1_RPS", "200")),   # 第1階段: 200 RPS
+            int(os.getenv("LOCUST_PHASE2_RPS", "600")),  # 第2階段: 600 RPS
+            int(os.getenv("LOCUST_PHASE3_RPS", "200")),   # 第3階段: 200 RPS
+            int(os.getenv("LOCUST_PHASE4_RPS", "900"))   # 第4階段: 900 RPS
         ]
         
         self.phase_duration = self.run_time_seconds / 4  # 每個階段平均分配時間

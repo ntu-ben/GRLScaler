@@ -107,7 +107,7 @@ class RushSaleShape(LoadTestShape):
         
         # 搶購模式RPS配置
         self.base_rps = int(os.getenv("LOCUST_BASE_RPS", "100"))      # 基礎RPS
-        self.peak_rps = int(os.getenv("LOCUST_PEAK_RPS", "500"))     # 峰值RPS
+        self.peak_rps = int(os.getenv("LOCUST_PEAK_RPS", "1000"))     # 峰值RPS
         self.rush_start_ratio = float(os.getenv("LOCUST_RUSH_START", "0.2"))  # 搶購開始時間比例
         self.rush_end_ratio = float(os.getenv("LOCUST_RUSH_END", "0.8"))      # 搶購結束時間比例
         

@@ -7,7 +7,7 @@ Redis OffPeak Load Test
 
 import random
 import redis
-from locust import HttpUser, task, between
+from locust import HttpUser, task, between, LoadTestShape
 from locust.exception import StopUser
 import time
 import os
@@ -113,9 +113,46 @@ class RedisOffPeakUser(HttpUser):
                 exception=e,
             )
 
+class RedisOffPeakShape(LoadTestShape):
+    """Redis 離峰負載，固定150 RPS，無抖動"""
+    
+    def __init__(self):
+        super().__init__()
+        # 從環境變數讀取配置
+        self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
+        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "150"))  # 固定150 RPS (Redis離峰)
+        self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
+        
+        print(f"🔧 Redis OffPeak壓測配置:")
+        print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
+        print(f"   📊 目標RPS: {self.target_rps} (固定)")
+        print(f"   👥 目標用戶數: {self.target_users}")
+    
+    def _parse_time(self, time_str):
+        """解析時間字符串"""
+        if time_str.endswith('m'):
+            return int(time_str[:-1]) * 60
+        elif time_str.endswith('s'):
+            return int(time_str[:-1])
+        elif time_str.endswith('h'):
+            return int(time_str[:-1]) * 3600
+        else:
+            return 900  # 預設15分鐘
+    
+    def tick(self):
+        """返回當前時刻的用戶數和生成速率"""
+        run_time = self.get_run_time()
+        
+        # 檢查是否超過運行時間
+        if run_time >= self.run_time_seconds:
+            return None
+        
+        # 固定用戶數，確保無抖動
+        return (self.target_users, self.target_users)
+
 # 配置用戶負載
 if __name__ == "__main__":
     # OffPeak 負載配置
-    # 用戶數: 10-30
-    # 每秒請求數: 50-100
+    # 用戶數: 根據 RPS 動態調整
+    # 每秒請求數: 150 RPS (固定)
     pass
