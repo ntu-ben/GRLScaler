@@ -272,6 +272,17 @@ class UnifiedExperimentManager:
         exp_config = self.config['experiments'][experiment]
         self.logger.info(f"🚀 開始執行實驗: {exp_config['name']}")
         
+        # 根據 use_case 設置正確的 namespace
+        use_case = kwargs.get('use_case', 'online_boutique')
+        if use_case == 'redis':
+            self.namespace = self.redis_namespace
+            self.target_host = "redis-master.redis.svc.cluster.local"
+        else:
+            self.namespace = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
+            self.target_host = os.getenv("TARGET_HOST", "http://k8s.orb.local:8080")
+        
+        self.logger.info(f"📍 設置環境: use_case={use_case}, namespace={self.namespace}")
+        
         # 生成運行標籤 - 使用新的統一格式
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         algorithm = kwargs.get('alg', 'ppo')
@@ -618,11 +629,19 @@ class UnifiedExperimentManager:
         self.logger.info(f"🔗 分散式測試: M1_HOST={host}")
         self.logger.info(f"🚀 觸發遠端 Locust {scenario}")
         
+        # 自動判斷環境類型
+        environment = 'onlineboutique' if self.namespace == 'onlineboutique' else 'redis'
+        
         payload = {
             "tag": tag,
             "scenario": scenario,
             "target_host": self.target_host,
             "run_time": self.locust_run_time,
+            "environment": environment,
+            "namespace": self.namespace,
+            "stable_mode": self.stable_loadtest,
+            "max_rps": self.target_rps,
+            "timeout": self.loadtest_timeout,
         }
         
         try:

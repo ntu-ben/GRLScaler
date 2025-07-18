@@ -39,6 +39,7 @@ class JobReq(BaseModel):
     max_rps: int = None        # 最高RPS限制
     timeout: int = 30          # 請求超時時間
     environment: str = "onlineboutique"  # "onlineboutique" or "redis"
+    namespace: str = None      # kubernetes namespace (for auto-detection)
 
 jobs = {}   # job_id -> {"path":…, "ret":returncode}
 
@@ -68,16 +69,64 @@ def _parse_timespan(spec: str) -> int:
     return total
 
 
+def _auto_detect_environment(req: JobReq) -> str:
+    """自動判斷環境類型（redis 或 onlineboutique）"""
+    # 方法1：根據namespace判斷
+    if req.namespace:
+        if req.namespace == "redis":
+            return "redis"
+        elif req.namespace == "onlineboutique":
+            return "onlineboutique"
+    
+    # 方法2：根據target_host判斷
+    if req.target_host:
+        if "redis" in req.target_host.lower():
+            return "redis"
+        elif "onlineboutique" in req.target_host.lower() or "k8s.orb.local" in req.target_host.lower():
+            return "onlineboutique"
+    
+    # 方法3：根據tag判斷
+    if req.tag:
+        if "redis" in req.tag.lower():
+            return "redis"
+        elif "onlineboutique" in req.tag.lower() or "gym_hpa" in req.tag.lower():
+            return "onlineboutique"
+    
+    # 預設返回原始設定
+    return req.environment
+
+def _get_redis_target_host():
+    """獲取Redis目標主機（支援多種配置）"""
+    # 嘗試多種Redis連接方式
+    redis_hosts = [
+        os.getenv("REDIS_HOST"),  # 從環境變數
+        "localhost",              # 本地測試
+        "127.0.0.1",             # 本地IP
+        "redis-master.redis.svc.cluster.local",  # K8s服務名
+        "10.0.0.1",              # 可能的集群IP
+    ]
+    
+    # 返回第一個非空的host
+    for host in redis_hosts:
+        if host:
+            return host
+    
+    return "localhost"  # 預設值
+
 def _run_locust(job_id: str, req: JobReq):
     out_dir = LOG_ROOT / req.tag
     out_dir.mkdir(parents=True, exist_ok=True)
     
+    # 自動判斷環境
+    detected_env = _auto_detect_environment(req)
+    logging.info(f"Auto-detected environment: {detected_env} (original: {req.environment})")
+    
     # 選擇環境目錄
-    scenario_dir = REDIS_DIR if req.environment == "redis" else ONLINEBOUTIQUE_DIR
+    scenario_dir = REDIS_DIR if detected_env == "redis" else ONLINEBOUTIQUE_DIR
     
     # 選擇腳本（穩定模式或原版）
     if req.stable_mode:
-        if req.environment == "redis":
+        if detected_env == "redis":
             script_name = f"locust_redis_stable_{req.scenario}.py"
         else:
             script_name = f"locust_stable_{req.scenario}.py"
@@ -85,12 +134,12 @@ def _run_locust(job_id: str, req: JobReq):
         stable_script = scenario_dir / script_name
         if not stable_script.exists():
             logging.warning(f"Stable script {script_name} not found, falling back to original")
-            if req.environment == "redis":
+            if detected_env == "redis":
                 script_name = f"locust_redis_{req.scenario}.py"
             else:
                 script_name = f"locust_{req.scenario}.py"
     else:
-        if req.environment == "redis":
+        if detected_env == "redis":
             script_name = f"locust_redis_{req.scenario}.py"
         else:
             script_name = f"locust_{req.scenario}.py"
@@ -103,6 +152,19 @@ def _run_locust(job_id: str, req: JobReq):
         env['LOCUST_MAX_RPS'] = str(req.max_rps)     # 保持舊版相容性
     if req.timeout:
         env['LOCUST_REQUEST_TIMEOUT'] = str(req.timeout)  # 統一命名
+    
+    # Redis 特殊配置
+    if detected_env == "redis":
+        # 設定Redis主機連接
+        redis_host = _get_redis_target_host()
+        env['REDIS_HOST'] = redis_host
+        env['REDIS_PORT'] = "6379"
+        logging.info(f"Redis environment detected, using host: {redis_host}")
+        
+        # 修改 target_host 為 Redis 連接格式
+        if not req.target_host or req.target_host == "http://k8s.orb.local:8080":
+            req.target_host = f"redis://{redis_host}:6379"
+            logging.info(f"Updated target_host for Redis: {req.target_host}")
     
     cmd = [
         LOCUST_BIN, "-f", scenario_dir / script_name,

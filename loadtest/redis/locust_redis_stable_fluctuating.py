@@ -18,6 +18,8 @@ class StableRedisUser(HttpUser):
         redis_host = os.getenv("REDIS_HOST", "localhost")
         redis_port = int(os.getenv("REDIS_PORT", "6379"))
         
+        logging.info(f"Connecting to Redis at {redis_host}:{redis_port}")
+        
         try:
             # 連接Redis
             self.redis_client = redis.Redis(

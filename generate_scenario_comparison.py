@@ -18,6 +18,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 import seaborn as sns
 from scipy import integrate
+import numpy as np
 
 # 設置中文字體支持
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
@@ -752,38 +753,52 @@ class ScenarioComparisonGenerator:
         
         # 1. 計算pod跟時間的面積 (Pod-Minutes)
         if pod_data is not None and not pod_data.empty:
-            # 使用梯形法則計算面積
+            # 使用梯形法則計算面積 - Pod數量對時間的積分
             time_minutes = pod_data['time_minutes'].values
             pod_counts = pod_data['pods'].values
             
             # 確保時間是從0開始的連續序列
             if len(time_minutes) > 1:
-                stats['pod_time_area'] = integrate.trapz(pod_counts, time_minutes)
+                # 使用梯形積分計算Pod時間面積：Pod數量對時間的積分
+                try:
+                    stats['pod_time_area'] = float(integrate.trapezoid(pod_counts, time_minutes))
+                except AttributeError:
+                    # 兼容舊版本的scipy
+                    stats['pod_time_area'] = float(integrate.trapz(pod_counts, time_minutes))
             else:
-                stats['pod_time_area'] = pod_counts[0] * 15  # 假設15分鐘測試
+                # 只有一個數據點時，假設是整個測試期間的平均Pod數量
+                test_duration_minutes = 15  # 15分鐘測試
+                stats['pod_time_area'] = float(pod_counts[0] * test_duration_minutes)
         
         # 2. 計算總Request數和平均RPS
         if rps_data is not None and not rps_data.empty:
             time_minutes = rps_data['time_minutes'].values
             rps_values = rps_data['rps'].values
             
-            # 總請求數 = RPS * 時間間隔 (分鐘)
+            # 總請求數 = 使用積分概念計算每個時間切片的總請求數
             if len(time_minutes) > 1:
-                # 計算每分鐘的請求數並求和
-                total_requests = 0
-                for i in range(len(time_minutes) - 1):
-                    time_interval = (time_minutes[i+1] - time_minutes[i]) * 60  # 轉換為秒
-                    total_requests += rps_values[i] * time_interval
-                stats['total_requests'] = total_requests
+                # 使用梯形積分計算總請求數：RPS對時間的積分
+                try:
+                    # 時間單位是分鐘，需要轉換為秒來計算總請求數
+                    time_seconds = time_minutes * 60
+                    total_requests = integrate.trapezoid(rps_values, time_seconds)
+                    stats['total_requests'] = float(total_requests)
+                except AttributeError:
+                    # 兼容舊版本的scipy
+                    time_seconds = time_minutes * 60
+                    total_requests = integrate.trapz(rps_values, time_seconds)
+                    stats['total_requests'] = float(total_requests)
             else:
-                stats['total_requests'] = rps_values[0] * 15 * 60  # 假設15分鐘測試
+                # 只有一個數據點時，假設是整個測試期間的平均RPS
+                test_duration_seconds = 15 * 60  # 15分鐘 = 900秒
+                stats['total_requests'] = float(rps_values[0] * test_duration_seconds) if len(rps_values) > 0 else 0.0
             
             # 平均RPS
-            stats['avg_rps'] = np.mean(rps_values[rps_values > 0])  # 排除0值
+            stats['avg_rps'] = float(np.mean(rps_values[rps_values > 0]))  # 排除0值
         
         # 3. 計算總REQ/pod與時間面積比率
         if stats['pod_time_area'] > 0:
-            stats['req_per_pod_time_area'] = stats['total_requests'] / stats['pod_time_area']
+            stats['req_per_pod_time_area'] = float(stats['total_requests'] / stats['pod_time_area'])
         
         return stats
     
@@ -823,7 +838,10 @@ class ScenarioComparisonGenerator:
                 if len(service_pod_data) > 1:
                     time_values = [entry['time_minutes'] for entry in service_pod_data]
                     pod_values = [entry['pods'] for entry in service_pod_data]
-                    service_stats['pod_time_area'] = integrate.trapz(pod_values, time_values)
+                    try:
+                        service_stats['pod_time_area'] = integrate.trapezoid(pod_values, time_values)
+                    except AttributeError:
+                        service_stats['pod_time_area'] = integrate.trapz(pod_values, time_values)
             
             # 計算服務級別的響應時間統計
             if service in response_data_per_service:
@@ -972,7 +990,7 @@ class ScenarioComparisonGenerator:
         # 保存統計報告
         stats_file = self.output_dir / "detailed_statistics.json"
         with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(all_statistics, f, ensure_ascii=False, indent=2)
+            json.dump(all_statistics, f, ensure_ascii=False, indent=2, default=self._json_converter)
         
         print(f"📋 詳細統計報告已保存: {stats_file}")
         
@@ -981,17 +999,52 @@ class ScenarioComparisonGenerator:
         
         return all_statistics
     
+    def _json_converter(self, obj):
+        """JSON序列化轉換器，處理NumPy類型"""
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, pd.DataFrame):
+            return obj.to_dict()
+        raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+    
     def _enhance_statistics_with_response_times(self, detailed_stats: Dict, application: str, scenario: str):
         """增強統計數據，添加響應時間信息"""
         
         for method_name, method_stats in detailed_stats['summary_statistics'].items():
-            # 嘗試從對應的實驗目錄中獲取響應時間數據
-            # 將K8s-HPA-cpu-XX格式轉換為K8s-HPA
-            base_method_name = method_name
-            if method_name.startswith('K8s-HPA-'):
-                base_method_name = 'K8s-HPA'
+            experiment_dir = None
             
-            experiment_dir = self.find_latest_experiment_data(base_method_name, application)
+            # 針對不同方法使用不同的目錄查找策略
+            if method_name.startswith('K8s-HPA-'):
+                # 對於K8s-HPA配置，使用與collect_scenario_data相同的邏輯
+                config = method_name.replace('K8s-HPA-', '')  # 提取config，如 "cpu-20"
+                method_dir_name = self.app_method_mapping[application]["K8s-HPA"]
+                method_dir = self.logs_root / method_dir_name
+                
+                # 查找特定配置的實驗目錄
+                config_dirs = []
+                if application == "redis":
+                    pattern = f"redis_hpa_{config}_*"
+                    for test_dir in method_dir.glob(pattern):
+                        if self.detect_experiment_application(test_dir) == application:
+                            config_dirs.append(test_dir)
+                else:
+                    # OnlineBoutique K8s-HPA: k8s_hpa_cpu_seed42_*/cpu-XX/
+                    for test_dir in method_dir.glob("k8s_hpa_cpu_seed42_*"):
+                        cpu_config_dir = test_dir / config  # config is like "cpu-40"
+                        if cpu_config_dir.exists() and self.detect_experiment_application(test_dir) == application:
+                            config_dirs.append(cpu_config_dir)
+                
+                if config_dirs:
+                    # 選擇最新的配置目錄
+                    experiment_dir = max(config_dirs, key=lambda x: x.name)
+                    
+            else:
+                # 對於其他方法，使用原有邏輯
+                experiment_dir = self.find_latest_experiment_data(method_name, application)
             
             if experiment_dir:
                 response_time_data = self.extract_response_time_data(experiment_dir, scenario, application)
@@ -1321,9 +1374,26 @@ def main():
     # 檢查命令行參數
     if len(sys.argv) > 1:
         specified_app = sys.argv[1].lower()
-        if specified_app not in ["redis", "onlineboutique"]:
+        if specified_app in ["--help", "-h", "help"]:
+            print("📋 使用說明:")
+            print("   python generate_scenario_comparison.py [應用名]")
+            print("   ")
+            print("   可選參數:")
+            print("     redis         - 只生成Redis的統計和對比圖")
+            print("     onlineboutique - 只生成OnlineBoutique的統計和對比圖")
+            print("     無參數         - 生成所有應用的統計和對比圖")
+            print("   ")
+            print("   輸出文件:")
+            print("     scenario_comparisons_fixed/")
+            print("     ├── *.png                    - 對比圖文件")
+            print("     ├── statistics_summary.csv   - 統計數據表格")
+            print("     ├── statistics_summary.xlsx  - Excel格式統計數據")
+            print("     └── detailed_statistics.json - 詳細JSON統計數據")
+            return
+        elif specified_app not in ["redis", "onlineboutique"]:
             print(f"❌ 不支援的應用: {specified_app}")
             print("💡 支援的應用: redis, onlineboutique")
+            print("💡 使用 --help 查看使用說明")
             return
         print(f"🎯 指定應用: {specified_app}")
     else:
