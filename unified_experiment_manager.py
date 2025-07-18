@@ -632,10 +632,17 @@ class UnifiedExperimentManager:
         # 自動判斷環境類型
         environment = 'onlineboutique' if self.namespace == 'onlineboutique' else 'redis'
         
+        # 針對Redis環境，調整target_host
+        target_host = self.target_host
+        if environment == 'redis':
+            # 對於Redis環境，使用NodePort 30379
+            target_host = "redis://10.0.0.1:30379"
+            self.logger.info(f"🔧 Redis環境detected，使用 target_host: {target_host}")
+        
         payload = {
             "tag": tag,
             "scenario": scenario,
-            "target_host": self.target_host,
+            "target_host": target_host,
             "run_time": self.locust_run_time,
             "environment": environment,
             "namespace": self.namespace,

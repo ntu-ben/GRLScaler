@@ -95,23 +95,63 @@ def _auto_detect_environment(req: JobReq) -> str:
     # 預設返回原始設定
     return req.environment
 
+def _setup_redis_port_forward():
+    """設置Redis port-forward（如果需要）"""
+    import subprocess
+    import socket
+    
+    # 檢查localhost:6379是否可以連接
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(('localhost', 6379))
+        sock.close()
+        if result == 0:
+            logging.info("Redis already accessible on localhost:6379")
+            return True
+    except:
+        pass
+    
+    # 如果無法連接，嘗試設置port-forward
+    logging.info("Setting up Redis port-forward...")
+    try:
+        # 檢查kubectl是否可用
+        subprocess.run(['kubectl', 'version', '--client'], capture_output=True, check=True)
+        
+        # 設置port-forward（背景執行）
+        cmd = ['kubectl', 'port-forward', '-n', 'redis', 'svc/redis-master', '6379:6379']
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # 等待port-forward建立（最多5秒）
+        import time
+        for i in range(10):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex(('localhost', 6379))
+                sock.close()
+                if result == 0:
+                    logging.info("✅ Redis port-forward established successfully")
+                    return True
+            except:
+                pass
+            time.sleep(0.5)
+        
+        logging.warning("❌ Failed to establish Redis port-forward")
+        return False
+        
+    except Exception as e:
+        logging.error(f"❌ Error setting up Redis port-forward: {e}")
+        return False
+
 def _get_redis_target_host():
     """獲取Redis目標主機（支援多種配置）"""
-    # 嘗試多種Redis連接方式
-    redis_hosts = [
-        os.getenv("REDIS_HOST"),  # 從環境變數
-        "localhost",              # 本地測試
-        "127.0.0.1",             # 本地IP
-        "redis-master.redis.svc.cluster.local",  # K8s服務名
-        "10.0.0.1",              # 可能的集群IP
-    ]
+    # 從環境變數優先
+    if os.getenv("REDIS_HOST"):
+        return os.getenv("REDIS_HOST")
     
-    # 返回第一個非空的host
-    for host in redis_hosts:
-        if host:
-            return host
-    
-    return "localhost"  # 預設值
+    # 使用 NodePort 配置：10.0.0.1:30379
+    return "10.0.0.1"
 
 def _run_locust(job_id: str, req: JobReq):
     out_dir = LOG_ROOT / req.tag
@@ -157,13 +197,19 @@ def _run_locust(job_id: str, req: JobReq):
     if detected_env == "redis":
         # 設定Redis主機連接
         redis_host = _get_redis_target_host()
+        # 根據主機類型選擇正確的端口
+        if redis_host in ["10.0.0.1", "198.19.249.2"]:
+            redis_port = "30379"  # NodePort
+        else:
+            redis_port = "6379"   # 標準端口或port-forward
+        
         env['REDIS_HOST'] = redis_host
-        env['REDIS_PORT'] = "6379"
-        logging.info(f"Redis environment detected, using host: {redis_host}")
+        env['REDIS_PORT'] = redis_port
+        logging.info(f"Redis environment detected, using host: {redis_host}:{redis_port}")
         
         # 修改 target_host 為 Redis 連接格式
         if not req.target_host or req.target_host == "http://k8s.orb.local:8080":
-            req.target_host = f"redis://{redis_host}:6379"
+            req.target_host = f"redis://{redis_host}:{redis_port}"
             logging.info(f"Updated target_host for Redis: {req.target_host}")
     
     cmd = [
