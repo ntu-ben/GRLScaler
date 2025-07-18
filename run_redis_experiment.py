@@ -283,8 +283,14 @@ class RedisExperimentRunner(ExperimentRunner):
         return True
     
     def _run_redis_loadtest(self, hpa_config: str, timestamp: str):
-        """執行 Redis 負載測試"""
+        """執行 Redis 負載測試（使用統一實驗管理器的分散式Locust）"""
         scenarios = ['offpeak', 'peak', 'rushsale', 'fluctuating']  # 所有 Redis 場景
+        
+        # 使用統一實驗管理器執行分散式Locust測試
+        from unified_experiment_manager import UnifiedExperimentManager
+        
+        # 初始化統一實驗管理器
+        manager = UnifiedExperimentManager()
         
         for scenario in scenarios:
             self.log_info(f"📊 執行 Redis 負載測試: {scenario}")
@@ -296,59 +302,20 @@ class RedisExperimentRunner(ExperimentRunner):
             output_dir = self.repo_root / "logs" / "k8s_hpa_redis" / f"redis_hpa_{hpa_config}_{timestamp}" / scenario
             output_dir.mkdir(parents=True, exist_ok=True)
             
-            # 選擇正確的腳本路徑
-            script_path = self.repo_root / "loadtest" / "redis" / f"locust_redis_stable_{scenario}.py"
-            
-            # 檢查腳本是否存在
-            if not script_path.exists():
-                script_path = self.repo_root / "loadtest" / "redis" / f"locust_redis_{scenario}.py"
-                
-            if not script_path.exists():
-                self.log_error(f"❌ 找不到負載測試腳本: {script_path}")
-                continue
-            
-            # 使用當前 Python 環境的 locust 來避免模組問題
-            import sys
-            python_path = sys.executable
-            cmd = [
-                python_path, "-m", "locust", "-f", str(script_path), "--headless", 
-                "--run-time", "15m",
-                "--users", "50", "--spawn-rate", "5",
-                "--csv", str(output_dir / scenario),
-                "--html", str(output_dir / f"{scenario}.html"),
-                "--host", "redis-master.redis.svc.cluster.local"
-            ]
+            # 準備遠端標籤
+            remote_tag = f"k8s-hpa-redis/{hpa_config}_{timestamp}"
             
             try:
-                self.log_info(f"🚀 開始執行 {scenario} 負載測試 (15分鐘)")
-                result = subprocess.run(cmd, timeout=1200, capture_output=True, text=True)
+                self.log_info(f"🚀 開始執行 {scenario} 負載測試 (15分鐘) - 使用分散式Locust")
                 
-                if result.returncode == 0:
+                # 使用統一實驗管理器的分散式Locust方法
+                success = manager.run_distributed_locust(scenario, remote_tag, output_dir)
+                
+                if success:
                     self.log_success(f"✅ {scenario} 測試完成")
                 else:
-                    self.log_error(f"❌ {scenario} 測試失敗 (退出碼: {result.returncode})")
-                    if result.stderr:
-                        # 過濾掉 Locust 的警告信息，只顯示真正的錯誤
-                        stderr_lines = result.stderr.strip().split('\n')
-                        real_errors = []
-                        for line in stderr_lines:
-                            # 跳過常見的 Locust 警告信息
-                            if ('Python 3.9 support is deprecated' in line or 
-                                'have no impact on LoadShapes' in line or
-                                'Starting Locust' in line):
-                                continue
-                            real_errors.append(line)
+                    self.log_error(f"❌ {scenario} 測試失敗")
                         
-                        if real_errors:
-                            self.log_error(f"錯誤信息: {chr(10).join(real_errors)}")
-                        else:
-                            self.log_info("📋 只有 Locust 警告信息，無實際錯誤")
-                    
-                    if result.stdout:
-                        self.log_info(f"輸出信息: {result.stdout[-500:]}")  # 只顯示最後500字符
-                        
-            except subprocess.TimeoutExpired:
-                self.log_error(f"❌ {scenario} 測試超時")
             except Exception as e:
                 self.log_error(f"❌ {scenario} 測試失敗: {e}")
     
@@ -414,97 +381,50 @@ class RedisExperimentRunner(ExperimentRunner):
         return True
     
     def _run_redis_loadtest_filtered(self, hpa_config: str, timestamp: str, selected_scenarios: list):
-        """執行選定場景的 Redis 負載測試"""
+        """執行選定場景的 Redis 負載測試 - 使用 UnifiedExperimentManager 分散式 Locust 方法"""
+        from unified_experiment_manager import UnifiedExperimentManager
+        
+        # 初始化 UnifiedExperimentManager for Redis environment
+        manager = UnifiedExperimentManager(
+            config_path=self.repo_root / "experiment_config.yaml",
+            stable_loadtest=self.stable_loadtest,
+            target_rps=self.max_rps,
+            loadtest_timeout=self.loadtest_timeout
+        )
+        
+        # 設置 Redis 相關配置
+        manager.namespace = "redis"
+        manager.target_host = "redis-master.redis.svc.cluster.local"
+        
         scenario_counter = 1
         
         for scenario in selected_scenarios:
             scenario_tag = f"{scenario}_{scenario_counter:03d}"
             self.log_info(f"📊 執行選定場景 Redis 負載測試: {scenario_tag}")
             
-            # 重置 Redis Pod 數量
-            self.reset_redis_pods()
-            
             # 構建輸出目錄
             output_dir = self.repo_root / "logs" / "k8s_hpa_redis" / f"redis_hpa_{hpa_config}_{timestamp}" / scenario_tag
             output_dir.mkdir(parents=True, exist_ok=True)
             
-            # 設置 Pod 監控
-            pod_monitor = self._setup_pod_monitoring_for_redis(scenario, output_dir)
-            
-            # 選擇正確的腳本路徑
-            script_path = self.repo_root / "loadtest" / "redis" / f"locust_redis_stable_{scenario}.py"
-            
-            # 檢查腳本是否存在
-            if not script_path.exists():
-                script_path = self.repo_root / "loadtest" / "redis" / f"locust_redis_{scenario}.py"
-                
-            if not script_path.exists():
-                self.log_error(f"❌ 找不到負載測試腳本: {script_path}")
-                scenario_counter += 1
-                continue
-            
-            # 使用當前 Python 環境的 locust
-            python_path = sys.executable
-            cmd = [
-                python_path, "-m", "locust", "-f", str(script_path), "--headless", 
-                "--run-time", "15m",
-                "--users", "50", "--spawn-rate", "5",
-                "--csv", str(output_dir / scenario),
-                "--html", str(output_dir / f"{scenario}.html"),
-                "--host", "redis-master.redis.svc.cluster.local"
-            ]
-            
             try:
                 self.log_info(f"🚀 開始執行 {scenario} 負載測試 (15分鐘)")
                 
-                # 啟動 Pod 監控
-                pod_monitor.start_all_monitoring(15)  # 15分鐘監控
-                
-                # 等待 Pod 穩定
-                time.sleep(30)
-                
-                # 執行負載測試
+                # 使用 UnifiedExperimentManager 的分散式 Locust 方法
                 start_time = time.time()
-                result = subprocess.run(cmd, timeout=1200, capture_output=True, text=True)
+                success = manager.run_distributed_locust(scenario, scenario_tag, output_dir)
                 end_time = time.time()
                 
                 duration = int(end_time - start_time)
                 
-                # 停止 Pod 監控
-                pod_monitor.stop_all_monitoring()
-                
-                if result.returncode == 0:
+                if success:
                     self.log_success(f"✅ {scenario} 測試完成 (耗時: {duration}秒)")
                     self.log_info(f"📊 數據已保存到: {output_dir}")
                     self.log_info(f"📈 Pod 監控數據: {output_dir / 'pod_metrics'}")
                 else:
-                    self.log_error(f"❌ {scenario} 測試失敗 (退出碼: {result.returncode})")
-                    if result.stderr:
-                        # 過濾掉 Locust 的警告信息，只顯示真正的錯誤
-                        stderr_lines = result.stderr.strip().split('\n')
-                        real_errors = []
-                        for line in stderr_lines:
-                            # 跳過常見的 Locust 警告信息
-                            if ('Python 3.9 support is deprecated' in line or 
-                                'have no impact on LoadShapes' in line or
-                                'Starting Locust' in line):
-                                continue
-                            real_errors.append(line)
+                    self.log_error(f"❌ {scenario} 測試失敗")
                         
-                        if real_errors:
-                            self.log_error(f"錯誤信息: {chr(10).join(real_errors)}")
-                        else:
-                            self.log_info("📋 只有 Locust 警告信息，無實際錯誤")
-                    
-                    if result.stdout:
-                        self.log_info(f"輸出信息: {result.stdout[-500:]}")  # 只顯示最後500字符
-                        
-            except subprocess.TimeoutExpired:
-                self.log_error(f"❌ {scenario} 測試超時")
-                pod_monitor.stop_all_monitoring()
             except Exception as e:
                 self.log_error(f"❌ {scenario} 測試失敗: {e}")
-                pod_monitor.stop_all_monitoring()
             
             # 場景間等待
             if scenario_counter < len(selected_scenarios):

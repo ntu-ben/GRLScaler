@@ -176,12 +176,12 @@ class StableRedisOffPeakShape(LoadTestShape):
         super().__init__()
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
-        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "50"))  # 固定50 RPS
+        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "500"))  # 固定500 RPS (10x增加)
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
-        print(f"🔧 穩定Redis Offpeak壓測配置:")
+        print(f"🔧 穩定Redis Offpeak壓測配置 (10x增強):")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
-        print(f"   📊 目標RPS: {self.target_rps} (固定)")
+        print(f"   📊 目標RPS: {self.target_rps} (固定, 10x增強)")
         print(f"   👥 目標用戶數: {self.target_users}")
     
     def _parse_time(self, time_str):

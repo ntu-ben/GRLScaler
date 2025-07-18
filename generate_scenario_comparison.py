@@ -17,6 +17,7 @@ import datetime
 import json
 from typing import Dict, List, Optional, Tuple
 import seaborn as sns
+from scipy import integrate
 
 # 設置中文字體支持
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
@@ -673,7 +674,7 @@ class ScenarioComparisonGenerator:
             else:
                 # OnlineBoutique K8s-HPA: k8s_hpa_cpu_seed42_*/cpu-XX/
                 for test_dir in method_dir.glob("k8s_hpa_cpu_seed42_*"):
-                    cpu_config_dir = test_dir / f"cpu-{config.split('-')[1]}"  # cpu-40 -> cpu-40
+                    cpu_config_dir = test_dir / config  # config is like "cpu-40"
                     if cpu_config_dir.exists() and self.detect_experiment_application(test_dir) == application:
                         config_dirs.append(cpu_config_dir)
             
@@ -689,6 +690,8 @@ class ScenarioComparisonGenerator:
                 pod_data = self.extract_pod_data_from_logs(latest_config_dir, "K8s-HPA", scenario)
                 rps_data = self.extract_rps_data(latest_config_dir, scenario, application)
                 
+                print(f"✅ 找到 {method_name} {application} 配置目錄: {latest_config_dir.name}")
+                
                 if pod_data is None:
                     print(f"❌ 未能提取 {method_name} {application} {scenario} pod數據")
                 if rps_data is None:
@@ -701,6 +704,406 @@ class ScenarioComparisonGenerator:
             }
             
         return scenario_data
+
+    def calculate_detailed_statistics(self, scenario_data: Dict) -> Dict:
+        """計算詳細統計數據"""
+        application = scenario_data['application']
+        scenario = scenario_data['scenario']
+        
+        detailed_stats = {
+            'application': application,
+            'scenario': scenario,
+            'microservices': [],
+            'summary_statistics': {}
+        }
+        
+        # 針對每個方法計算統計數據
+        for method_name, method_data in scenario_data['methods'].items():
+            if not method_data['has_data']:
+                continue
+                
+            pod_data = method_data['pod_data']
+            rps_data = method_data['rps_data']
+            
+            # 計算基本統計指標
+            stats = self._calculate_method_statistics(method_name, pod_data, rps_data)
+            
+            # 如果是微服務架構，嘗試獲取微服務級別的統計數據
+            if application == "onlineboutique":
+                microservice_stats = self._calculate_microservice_statistics(method_name, method_data)
+                detailed_stats['microservices'].extend(microservice_stats)
+            
+            detailed_stats['summary_statistics'][method_name] = stats
+        
+        return detailed_stats
+    
+    def _calculate_method_statistics(self, method_name: str, pod_data: pd.DataFrame, rps_data: pd.DataFrame) -> Dict:
+        """計算單個方法的統計數據"""
+        stats = {
+            'method': method_name,
+            'pod_time_area': 0,
+            'total_requests': 0,
+            'req_per_pod_time_area': 0,
+            'avg_rps': 0,
+            'avg_response_time': 0,
+            'p95_response_time': 0,
+            'p99_response_time': 0
+        }
+        
+        # 1. 計算pod跟時間的面積 (Pod-Minutes)
+        if pod_data is not None and not pod_data.empty:
+            # 使用梯形法則計算面積
+            time_minutes = pod_data['time_minutes'].values
+            pod_counts = pod_data['pods'].values
+            
+            # 確保時間是從0開始的連續序列
+            if len(time_minutes) > 1:
+                stats['pod_time_area'] = integrate.trapz(pod_counts, time_minutes)
+            else:
+                stats['pod_time_area'] = pod_counts[0] * 15  # 假設15分鐘測試
+        
+        # 2. 計算總Request數和平均RPS
+        if rps_data is not None and not rps_data.empty:
+            time_minutes = rps_data['time_minutes'].values
+            rps_values = rps_data['rps'].values
+            
+            # 總請求數 = RPS * 時間間隔 (分鐘)
+            if len(time_minutes) > 1:
+                # 計算每分鐘的請求數並求和
+                total_requests = 0
+                for i in range(len(time_minutes) - 1):
+                    time_interval = (time_minutes[i+1] - time_minutes[i]) * 60  # 轉換為秒
+                    total_requests += rps_values[i] * time_interval
+                stats['total_requests'] = total_requests
+            else:
+                stats['total_requests'] = rps_values[0] * 15 * 60  # 假設15分鐘測試
+            
+            # 平均RPS
+            stats['avg_rps'] = np.mean(rps_values[rps_values > 0])  # 排除0值
+        
+        # 3. 計算總REQ/pod與時間面積比率
+        if stats['pod_time_area'] > 0:
+            stats['req_per_pod_time_area'] = stats['total_requests'] / stats['pod_time_area']
+        
+        return stats
+    
+    def _calculate_microservice_statistics(self, method_name: str, method_data: Dict) -> List[Dict]:
+        """計算微服務級別的統計數據"""
+        microservice_stats = []
+        
+        # 對於OnlineBoutique，我們有11個微服務
+        ob_services = [
+            'adservice', 'cartservice', 'checkoutservice', 'currencyservice',
+            'emailservice', 'frontend', 'paymentservice', 'productcatalogservice',
+            'recommendationservice', 'shippingservice', 'redis-cart'
+        ]
+        
+        # 嘗試從pod monitoring CSV文件中獲取微服務級別的Pod數據
+        pod_data_per_service = self._extract_microservice_pod_data(method_data)
+        
+        # 嘗試從stats文件中獲取微服務級別的響應時間數據
+        response_data_per_service = self._extract_microservice_response_data(method_data)
+        
+        for service in ob_services:
+            service_stats = {
+                'method': method_name,
+                'microservice': service,
+                'pod_time_area': 0,
+                'total_requests': 0,
+                'req_per_pod_time_area': 0,
+                'avg_rps': 0,
+                'avg_response_time': 0,
+                'p95_response_time': 0,
+                'p99_response_time': 0
+            }
+            
+            # 計算服務級別的Pod時間面積
+            if service in pod_data_per_service:
+                service_pod_data = pod_data_per_service[service]
+                if len(service_pod_data) > 1:
+                    time_values = [entry['time_minutes'] for entry in service_pod_data]
+                    pod_values = [entry['pods'] for entry in service_pod_data]
+                    service_stats['pod_time_area'] = integrate.trapz(pod_values, time_values)
+            
+            # 計算服務級別的響應時間統計
+            if service in response_data_per_service:
+                service_response_data = response_data_per_service[service]
+                service_stats['total_requests'] = service_response_data.get('request_count', 0)
+                service_stats['avg_response_time'] = service_response_data.get('avg_response_time', 0)
+                service_stats['p95_response_time'] = service_response_data.get('p95_response_time', 0)
+                service_stats['p99_response_time'] = service_response_data.get('p99_response_time', 0)
+                
+                # 計算RPS（假設15分鐘測試）
+                if service_stats['total_requests'] > 0:
+                    service_stats['avg_rps'] = service_stats['total_requests'] / (15 * 60)
+                
+                # 計算請求/Pod時間面積比率
+                if service_stats['pod_time_area'] > 0:
+                    service_stats['req_per_pod_time_area'] = service_stats['total_requests'] / service_stats['pod_time_area']
+            
+            microservice_stats.append(service_stats)
+        
+        return microservice_stats
+    
+    def _extract_microservice_pod_data(self, method_data: Dict) -> Dict:
+        """提取微服務級別的Pod數據"""
+        # 這個函數需要根據實際的Pod監控數據格式來實現
+        # 目前返回空字典，實際使用時需要解析pod_metrics目錄中的具體文件
+        return {}
+    
+    def _extract_microservice_response_data(self, method_data: Dict) -> Dict:
+        """提取微服務級別的響應數據"""
+        # 這個函數需要根據實際的stats文件格式來實現
+        # 目前返回空字典，實際使用時需要解析stats.csv文件中的微服務級別數據
+        return {}
+    
+    def extract_response_time_data(self, experiment_dir: Path, scenario: str, application: str) -> Optional[pd.DataFrame]:
+        """提取響應時間數據"""
+        
+        # 根據應用類型調整場景目錄查找模式
+        if application == "redis":
+            scenario_patterns = [
+                f"{scenario}_*",
+                f"redis_{scenario}*",
+                f"redis_{scenario}",
+                f"{scenario}"
+            ]
+        else:
+            scenario_patterns = [f"{scenario}_*"]
+        
+        scenario_dir = None
+        for pattern in scenario_patterns:
+            scenario_dirs = list(experiment_dir.glob(pattern))
+            if scenario_dirs:
+                scenario_dir = scenario_dirs[0]
+                break
+        
+        if not scenario_dir:
+            return None
+        
+        # 查找stats文件
+        stats_files = [
+            scenario_dir / f"{scenario}_stats.csv",
+            scenario_dir / f"redis_{scenario}_stats.csv",
+            scenario_dir / "stats.csv"
+        ]
+        
+        stats_file = None
+        for file_path in stats_files:
+            if file_path.exists():
+                stats_file = file_path
+                break
+        
+        if not stats_file:
+            return None
+        
+        try:
+            df = pd.read_csv(stats_file)
+            
+            # 檢查是否有響應時間相關的列
+            response_time_cols = [
+                'Average Response Time', 'Min Response Time', 'Max Response Time',
+                '50%', '66%', '75%', '80%', '90%', '95%', '98%', '99%', '99.9%', '99.99%', '100%'
+            ]
+            
+            available_cols = [col for col in response_time_cols if col in df.columns]
+            if not available_cols:
+                return None
+            
+            # 整理響應時間數據
+            result_data = []
+            for _, row in df.iterrows():
+                entry = {
+                    'name': row.get('Name', 'Unknown'),
+                    'type': row.get('Type', 'Unknown'),
+                    'request_count': row.get('Request Count', 0),
+                    'avg_response_time': row.get('Average Response Time', 0),
+                    'p95_response_time': row.get('95%', 0),
+                    'p99_response_time': row.get('99%', 0)
+                }
+                result_data.append(entry)
+            
+            return pd.DataFrame(result_data)
+            
+        except Exception as e:
+            print(f"⚠️ 讀取響應時間數據失敗 {stats_file}: {e}")
+            return None
+    
+    def generate_detailed_statistics_report(self, application: str = None) -> Dict:
+        """生成詳細的統計數據報告"""
+        print(f"📊 生成詳細統計數據報告...")
+        
+        all_statistics = {
+            'generation_time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'applications': {}
+        }
+        
+        applications_to_process = [application] if application else self.applications
+        
+        for app in applications_to_process:
+            app_statistics = {
+                'application': app,
+                'scenarios': {}
+            }
+            
+            # 獲取該應用的可用場景
+            available_scenarios = self.get_available_scenarios(app)
+            
+            if not available_scenarios:
+                print(f"⚠️ 警告: {app} 沒有可用的場景數據")
+                continue
+            
+            for scenario in available_scenarios:
+                print(f"📈 分析 {app} - {scenario} 場景...")
+                
+                # 收集場景數據
+                scenario_data = self.collect_scenario_data(app, scenario)
+                
+                # 計算詳細統計
+                detailed_stats = self.calculate_detailed_statistics(scenario_data)
+                
+                # 增強統計數據 - 添加響應時間信息
+                self._enhance_statistics_with_response_times(detailed_stats, app, scenario)
+                
+                app_statistics['scenarios'][scenario] = detailed_stats
+            
+            all_statistics['applications'][app] = app_statistics
+        
+        # 保存統計報告
+        stats_file = self.output_dir / "detailed_statistics.json"
+        with open(stats_file, 'w', encoding='utf-8') as f:
+            json.dump(all_statistics, f, ensure_ascii=False, indent=2)
+        
+        print(f"📋 詳細統計報告已保存: {stats_file}")
+        
+        # 生成表格格式的報告
+        self._generate_statistics_table(all_statistics)
+        
+        return all_statistics
+    
+    def _enhance_statistics_with_response_times(self, detailed_stats: Dict, application: str, scenario: str):
+        """增強統計數據，添加響應時間信息"""
+        
+        for method_name, method_stats in detailed_stats['summary_statistics'].items():
+            # 嘗試從對應的實驗目錄中獲取響應時間數據
+            # 將K8s-HPA-cpu-XX格式轉換為K8s-HPA
+            base_method_name = method_name
+            if method_name.startswith('K8s-HPA-'):
+                base_method_name = 'K8s-HPA'
+            
+            experiment_dir = self.find_latest_experiment_data(base_method_name, application)
+            
+            if experiment_dir:
+                response_time_data = self.extract_response_time_data(experiment_dir, scenario, application)
+                
+                if response_time_data is not None and not response_time_data.empty:
+                    # 計算加權平均響應時間
+                    total_requests = response_time_data['request_count'].sum()
+                    if total_requests > 0:
+                        weighted_avg_rt = (response_time_data['avg_response_time'] * 
+                                         response_time_data['request_count']).sum() / total_requests
+                        weighted_p95_rt = (response_time_data['p95_response_time'] * 
+                                         response_time_data['request_count']).sum() / total_requests
+                        weighted_p99_rt = (response_time_data['p99_response_time'] * 
+                                         response_time_data['request_count']).sum() / total_requests
+                        
+                        method_stats['avg_response_time'] = weighted_avg_rt
+                        method_stats['p95_response_time'] = weighted_p95_rt
+                        method_stats['p99_response_time'] = weighted_p99_rt
+                        
+                        # 更新總請求數（如果stats文件有更准確的數據）
+                        if total_requests > method_stats['total_requests']:
+                            method_stats['total_requests'] = total_requests
+                            
+                            # 重新計算 req_per_pod_time_area
+                            if method_stats['pod_time_area'] > 0:
+                                method_stats['req_per_pod_time_area'] = total_requests / method_stats['pod_time_area']
+    
+    def _generate_statistics_table(self, all_statistics: Dict):
+        """生成表格格式的統計報告"""
+        
+        # 創建主要統計表格
+        table_data = []
+        microservice_data = []
+        
+        for app_name, app_data in all_statistics['applications'].items():
+            for scenario_name, scenario_data in app_data['scenarios'].items():
+                # 生成方法級別的統計
+                for method_name, method_stats in scenario_data['summary_statistics'].items():
+                    row = {
+                        '應用': app_name,
+                        '場景': scenario_name,
+                        '微服務': '總計',
+                        '方法': method_name,
+                        'Pod時間面積': f"{method_stats['pod_time_area']:.2f}",
+                        '總請求數': f"{method_stats['total_requests']:.0f}",
+                        '請求/Pod時間面積': f"{method_stats['req_per_pod_time_area']:.2f}",
+                        '平均RPS': f"{method_stats['avg_rps']:.2f}",
+                        '平均響應時間(ms)': f"{method_stats['avg_response_time']:.2f}",
+                        '95%響應時間(ms)': f"{method_stats['p95_response_time']:.2f}",
+                        '99%響應時間(ms)': f"{method_stats['p99_response_time']:.2f}"
+                    }
+                    table_data.append(row)
+                
+                # 生成微服務級別的統計（僅針對OnlineBoutique）
+                if app_name == 'onlineboutique' and scenario_data.get('microservices'):
+                    for microservice_stats in scenario_data['microservices']:
+                        row = {
+                            '應用': app_name,
+                            '場景': scenario_name,
+                            '微服務': microservice_stats['microservice'],
+                            '方法': microservice_stats['method'],
+                            'Pod時間面積': f"{microservice_stats['pod_time_area']:.2f}",
+                            '總請求數': f"{microservice_stats['total_requests']:.0f}",
+                            '請求/Pod時間面積': f"{microservice_stats['req_per_pod_time_area']:.2f}",
+                            '平均RPS': f"{microservice_stats['avg_rps']:.2f}",
+                            '平均響應時間(ms)': f"{microservice_stats['avg_response_time']:.2f}",
+                            '95%響應時間(ms)': f"{microservice_stats['p95_response_time']:.2f}",
+                            '99%響應時間(ms)': f"{microservice_stats['p99_response_time']:.2f}"
+                        }
+                        microservice_data.append(row)
+        
+        # 轉換為DataFrame並保存
+        df = pd.DataFrame(table_data)
+        
+        # 保存主要統計表格
+        csv_file = self.output_dir / "statistics_summary.csv"
+        df.to_csv(csv_file, index=False, encoding='utf-8-sig')
+        print(f"📊 統計表格已保存: {csv_file}")
+        
+        # 保存微服務級別統計表格（如果有的話）
+        if microservice_data:
+            microservice_df = pd.DataFrame(microservice_data)
+            microservice_csv_file = self.output_dir / "microservices_statistics.csv"
+            microservice_df.to_csv(microservice_csv_file, index=False, encoding='utf-8-sig')
+            print(f"📊 微服務統計表格已保存: {microservice_csv_file}")
+        
+        # 保存為Excel（如果可能）
+        try:
+            excel_file = self.output_dir / "statistics_summary.xlsx"
+            with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='總體統計', index=False)
+                if microservice_data:
+                    microservice_df.to_excel(writer, sheet_name='微服務統計', index=False)
+            print(f"📊 統計表格已保存: {excel_file}")
+        except ImportError:
+            print("📝 提示: 安裝openpyxl可以生成Excel格式的統計表格")
+        
+        # 打印摘要到控制台
+        print("\n" + "="*100)
+        print("📊 統計數據摘要")
+        print("="*100)
+        print(df.to_string(index=False))
+        print("="*100)
+        
+        if microservice_data:
+            print("\n" + "="*100)
+            print("📊 微服務統計數據摘要")
+            print("="*100)
+            print(microservice_df.to_string(index=False))
+            print("="*100)
+        
+        return df
 
     def create_comparison_plot(self, application: str, scenario: str, metric: str):
         """創建對比圖"""
@@ -882,6 +1285,10 @@ class ScenarioComparisonGenerator:
         # 生成總結報告
         self.generate_summary_report(generated_files)
         
+        # 生成詳細統計數據報告
+        print(f"\n📊 生成詳細統計數據報告...")
+        self.generate_detailed_statistics_report()
+        
         print(f"\n🎉 完成！共生成 {len(generated_files)} 個對比圖")
         print(f"📁 輸出目錄: {self.output_dir}")
         
@@ -935,12 +1342,29 @@ def main():
     
     print("\n" + "=" * 50)
     print("💡 使用說明:")
-    print("   • 查看生成的圖片文件在 scenario_comparisons_fixed/ 目錄")
-    print("   • 對比圖命名格式: {應用}_{場景}_{指標}.png")
-    print("   • 例如: redis_offpeak_rps.png, onlineboutique_fluctuating_pods.png")
-    print("   • 每個圖包含最多6條線: GNNRL, Gym-HPA, K8s-HPA-cpu-20, K8s-HPA-cpu-40, K8s-HPA-cpu-60, K8s-HPA-cpu-80")
-    print("   • 可以直接對比不同K8s-HPA CPU閾值設置的性能差異")
-    print("   • 只會生成有實際數據的場景對比圖")
+    print("   📊 對比圖文件:")
+    print("      • 查看生成的圖片文件在 scenario_comparisons_fixed/ 目錄")
+    print("      • 對比圖命名格式: {應用}_{場景}_{指標}.png")
+    print("      • 例如: redis_offpeak_rps.png, onlineboutique_fluctuating_pods.png")
+    print("      • 每個圖包含最多6條線: GNNRL, Gym-HPA, K8s-HPA-cpu-20, K8s-HPA-cpu-40, K8s-HPA-cpu-60, K8s-HPA-cpu-80")
+    print("      • 可以直接對比不同K8s-HPA CPU閾值設置的性能差異")
+    print("      • 只會生成有實際數據的場景對比圖")
+    print("   ")
+    print("   📈 統計數據報告:")
+    print("      • detailed_statistics.json - 完整的JSON格式統計數據")
+    print("      • statistics_summary.csv - 表格格式統計數據（可用Excel打開）")
+    print("      • statistics_summary.xlsx - Excel格式統計數據（如果安裝了openpyxl）")
+    print("   ")
+    print("   📋 統計指標包含:")
+    print("      • Pod時間面積 (Pod-Minutes)")
+    print("      • 總請求數")
+    print("      • 請求/Pod時間面積比率")
+    print("      • 平均RPS")
+    print("      • 平均響應時間(ms)")
+    print("      • 95%響應時間(ms)")
+    print("      • 99%響應時間(ms)")
+    print("   ")
+    print("   🎯 數據按照：場景 → 方法 → 統計指標 的層次結構組織")
 
 if __name__ == "__main__":
     main()

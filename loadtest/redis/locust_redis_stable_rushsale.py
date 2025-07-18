@@ -109,24 +109,24 @@ class StableRushSaleShape(LoadTestShape):
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
         
-        # 搶購模式RPS配置 - 穩定版本
-        self.base_rps = int(os.getenv("LOCUST_BASE_RPS", "100"))      # 基礎RPS
-        self.peak_rps = int(os.getenv("LOCUST_PEAK_RPS", "300"))     # 峰值RPS（穩定版本降低）
+        # 搶購模式RPS配置 - 穩定版本 (10x增強)
+        self.base_rps = int(os.getenv("LOCUST_BASE_RPS", "1000"))      # 基礎RPS (10x增加)
+        self.peak_rps = int(os.getenv("LOCUST_PEAK_RPS", "3000"))     # 峰值RPS (10x增加)
         self.rush_start_ratio = float(os.getenv("LOCUST_RUSH_START", "0.2"))  # 搶購開始時間比例
         self.rush_end_ratio = float(os.getenv("LOCUST_RUSH_END", "0.8"))      # 搶購結束時間比例
         
-        # 穩定版本特有：最大RPS限制
-        self.max_rps = int(os.getenv("LOCUST_MAX_RPS", "350"))
+        # 穩定版本特有：最大RPS限制 (10x增強)
+        self.max_rps = int(os.getenv("LOCUST_MAX_RPS", "3500"))
         
         # 限制RPS值
         self.base_rps = min(self.base_rps, self.max_rps)
         self.peak_rps = min(self.peak_rps, self.max_rps)
         
-        print(f"🔧 穩定Redis搶購模式配置:")
+        print(f"🔧 穩定Redis搶購模式配置 (10x增強):")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
-        print(f"   📊 基礎RPS: {self.base_rps}")
-        print(f"   🚀 搶購峰值RPS: {self.peak_rps}")
-        print(f"   📈 RPS上限: {self.max_rps}")
+        print(f"   📊 基礎RPS: {self.base_rps} (10x增強)")
+        print(f"   🚀 搶購峰值RPS: {self.peak_rps} (10x增強)")
+        print(f"   📈 RPS上限: {self.max_rps} (10x增強)")
         print(f"   ⏳ 搶購時間段: {self.rush_start_ratio:.1%} - {self.rush_end_ratio:.1%}")
     
     def _parse_time(self, time_str):

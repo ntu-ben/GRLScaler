@@ -164,26 +164,26 @@ class StableFluctuatingShape(LoadTestShape):
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
         
-        # 四階段RPS配置 [低峰, 中峰, 低峰, 高峰] - Redis穩定版本
+        # 四階段RPS配置 [低峰, 中峰, 低峰, 高峰] - Redis穩定版本 (10x增強)
         self.phase_rps = [
-            int(os.getenv("LOCUST_PHASE1_RPS", "75")),   # 第1階段: 75 RPS
-            int(os.getenv("LOCUST_PHASE2_RPS", "200")),  # 第2階段: 200 RPS
-            int(os.getenv("LOCUST_PHASE3_RPS", "75")),   # 第3階段: 75 RPS
-            int(os.getenv("LOCUST_PHASE4_RPS", "300"))   # 第4階段: 300 RPS（穩定版本降低）
+            int(os.getenv("LOCUST_PHASE1_RPS", "750")),   # 第1階段: 750 RPS (10x增加)
+            int(os.getenv("LOCUST_PHASE2_RPS", "2000")),  # 第2階段: 2000 RPS (10x增加)
+            int(os.getenv("LOCUST_PHASE3_RPS", "750")),   # 第3階段: 750 RPS (10x增加)
+            int(os.getenv("LOCUST_PHASE4_RPS", "3000"))   # 第4階段: 3000 RPS (10x增加)
         ]
         
-        # 穩定版本特有：最大RPS限制
-        self.max_rps = int(os.getenv("LOCUST_MAX_RPS", "350"))
+        # 穩定版本特有：最大RPS限制 (10x增強)
+        self.max_rps = int(os.getenv("LOCUST_MAX_RPS", "3500"))
         
         # 限制過高的RPS值
         self.phase_rps = [min(rps, self.max_rps) for rps in self.phase_rps]
         
         self.phase_duration = self.run_time_seconds / 4  # 每個階段平均分配時間
         
-        print(f"🔧 穩定Redis波動模式配置:")
+        print(f"🔧 穩定Redis波動模式配置 (10x增強):")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
-        print(f"   📊 四階段RPS: {self.phase_rps}")
-        print(f"   📈 RPS上限: {self.max_rps}")
+        print(f"   📊 四階段RPS: {self.phase_rps} (10x增強)")
+        print(f"   📈 RPS上限: {self.max_rps} (10x增強)")
         print(f"   ⏳ 每階段時長: {self.phase_duration:.0f}秒")
     
     def _parse_time(self, time_str):

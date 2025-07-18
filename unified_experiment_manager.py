@@ -437,9 +437,17 @@ class UnifiedExperimentManager:
             time.sleep(3)
             
             # 立即开始负载测试场景
-            scenario_dirs = self.run_fixed_hpa_loadtest(
-                "gnnrl", run_tag, kwargs.get('seed', 42)
-            )
+            selected_scenarios = kwargs.get('test_scenarios')
+            if selected_scenarios:
+                # 使用選定場景進行測試
+                scenario_dirs = self.run_selected_scenarios_loadtest(
+                    "gnnrl", run_tag, kwargs.get('seed', 42), selected_scenarios
+                )
+            else:
+                # 使用所有場景進行測試（原來的行為）
+                scenario_dirs = self.run_fixed_hpa_loadtest(
+                    "gnnrl", run_tag, kwargs.get('seed', 42)
+                )
             
             # 等待GNNRL测试完全结束
             gnnrl_thread.join()
@@ -857,6 +865,65 @@ class UnifiedExperimentManager:
         self.logger.info(f"🏁 固定場景測試完成，執行了 {len(scenario_dirs)} 個場景")
         return scenario_dirs
     
+    def run_selected_scenarios_loadtest(self, experiment_type: str, run_tag: str, seed: int, selected_scenarios: list) -> List[Path]:
+        """執行選定場景的負載測試
+        
+        Args:
+            experiment_type: 實驗類型
+            run_tag: 運行標籤
+            seed: 隨機種子（用於生成場景順序）
+            selected_scenarios: 選定的場景列表，例如 ['peak', 'rushsale']
+        
+        Returns:
+            執行成功的場景目錄列表
+        """
+        # 驗證選定場景
+        available_scenarios = list(self.scenarios.keys())
+        valid_scenarios = [s for s in selected_scenarios if s in available_scenarios]
+        
+        if not valid_scenarios:
+            self.logger.error(f"❌ 沒有有效的場景。可用場景: {', '.join(available_scenarios)}")
+            return []
+        
+        if len(valid_scenarios) < len(selected_scenarios):
+            invalid_scenarios = [s for s in selected_scenarios if s not in available_scenarios]
+            self.logger.warning(f"⚠️ 忽略無效場景: {', '.join(invalid_scenarios)}")
+        
+        # 使用種子決定場景順序
+        random.seed(seed)
+        test_sequence = valid_scenarios.copy()
+        random.shuffle(test_sequence)  # 打亂順序但保持選定場景
+        
+        self.logger.info(f"📋 選定場景測試：執行 {len(test_sequence)} 個場景 (seed {seed}): {', '.join(test_sequence)}")
+        
+        # 創建基礎輸出目錄
+        base_output_dir = self.repo_root / "logs" / experiment_type / run_tag
+        base_output_dir.mkdir(parents=True, exist_ok=True)
+        
+        scenario_dirs = []
+        
+        # 執行選定場景
+        for i, scenario in enumerate(test_sequence, 1):
+            out_dir = base_output_dir / f"{scenario}_{i:03d}"
+            self.logger.info(f"📊 執行選定測試情境 [{i}/{len(test_sequence)}]: {scenario}")
+            
+            # 構建遠端標籤
+            remote_tag = f"{experiment_type}/{run_tag}" if self.m1_host else run_tag
+            
+            # 執行 Locust 測試
+            success = self.run_distributed_locust(scenario, remote_tag, out_dir)
+            if success:
+                scenario_dirs.append(out_dir)
+            
+            # 場景間短暫冷卻
+            if i < len(test_sequence):
+                cooldown = 60  # 固定測試間的標準冷卻時間
+                self.logger.info(f"⏸️ 場景間冷卻 {cooldown} 秒...")
+                time.sleep(cooldown)
+        
+        self.logger.info(f"🏁 選定場景測試完成，執行了 {len(scenario_dirs)} 個場景")
+        return scenario_dirs
+    
     def run_multi_hpa_experiment(self, experiment_type: str, run_tag: str, seed: int, hpa_type: str = 'all') -> List[Path]:
         """執行多配置HPA測試
         
@@ -1144,7 +1211,7 @@ def main():
     parser.add_argument('--alg', choices=['ppo', 'recurrent_ppo', 'a2c'], 
                        default='ppo',
                        help='強化學習算法')
-    parser.add_argument('--model', choices=['gat', 'gcn'], 
+    parser.add_argument('--model', choices=['gat', 'gcn', 'tgn'], 
                        default='gat',
                        help='GNN 模型類型 (僅適用於 gnnrl 實驗)')
     parser.add_argument('--seed', type=int, default=42,
@@ -1164,6 +1231,9 @@ def main():
                        help='使用已訓練模型進行測試 (需搭配 --load-path)')
     parser.add_argument('--load-path', type=str,
                        help='已訓練模型的路徑 (用於測試模式)')
+    parser.add_argument('--test-scenarios', nargs='+',
+                       choices=['offpeak', 'peak', 'rushsale', 'fluctuating'],
+                       help='選定要測試的場景，例如 --test-scenarios peak rushsale')
     
     # 其他功能
     parser.add_argument('--validate-only', action='store_true',
@@ -1215,7 +1285,8 @@ def main():
             k8s=args.k8s and not args.simulation,
             testing=args.testing,
             load_path=args.load_path,
-            hpa_type=args.hpa_type
+            hpa_type=args.hpa_type,
+            test_scenarios=args.test_scenarios
         )
         sys.exit(0 if success else 1)
     

@@ -20,6 +20,7 @@ from .deployment import (
     get_kiali_service_graph,
 )
 from .util import save_to_csv, get_cost_reward, get_latency_reward_redis, get_num_pods
+from .dynamic_graph_space import DynamicGraphSpace, DynamicGraphConfig
 
 # MIN and MAX Replication
 MIN_REPLICATION = 1
@@ -80,6 +81,17 @@ class Redis(gym.Env):
         self.goal_reward = goal_reward
         self.use_graph = use_graph
         self.waiting_period = waiting_period  # seconds to wait after action
+        
+        # Initialize dynamic graph space for Redis services
+        if self.use_graph:
+            config = DynamicGraphConfig(
+                max_nodes=8,  # Redis可能有額外的服務節點
+                max_edges=16,  # 對應的邊數上限
+                node_feat_dim=6,  # Redis節點特徵維度
+                edge_feat_dim=7,  # 邊特徵維度 
+                global_feat_dim=4  # 全局特徵維度
+            )
+            self.dynamic_graph = DynamicGraphSpace(config)
 
         logging.info("[Init] Env: {} | K8s: {} | Version {} |".format(self.name, self.k8s, self.__version__))
 
@@ -90,7 +102,11 @@ class Redis(gym.Env):
         self.num_actions = 15
 
         # Multi-Discrete - output action for each service simultaneously
-        num_services = len(DEPLOYMENTS)
+        if self.use_graph:
+            # 動態圖模式：使用最大節點數
+            num_services = self.dynamic_graph.config.max_nodes
+        else:
+            num_services = len(DEPLOYMENTS)
         self.action_space = spaces.MultiDiscrete([self.num_actions] * num_services)
 
         # Observations: 22 Metrics! -> 2 * 11 = 22
@@ -113,17 +129,8 @@ class Redis(gym.Env):
         self.deploymentList = get_redis_deployment_list(self.k8s, self.min_pods, self.max_pods)
 
         if self.use_graph:
-            num_nodes = len(DEPLOYMENTS)
-            node_feat_dim = 6
-            node_feat_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_nodes, node_feat_dim), dtype=np.float32)
-            adj_space = spaces.Box(low=0, high=1, shape=(num_nodes, num_nodes), dtype=np.float32)
-            self.observation_space = spaces.Dict({
-                'svc_df': node_feat_space,
-                'node_df': spaces.Box(-np.inf, np.inf, shape=(1, 4), dtype=np.float32),
-                'edge_df': spaces.Box(-np.inf, np.inf, shape=(num_nodes * num_nodes, 7), dtype=np.float32),
-                'flat_feats': spaces.Box(-np.inf, np.inf, shape=(4,), dtype=np.float32),
-                'invalid_action_mask': spaces.Box(0, 1, shape=(num_nodes * self.num_actions,), dtype=np.float32),
-            })
+            # 使用動態圖觀察空間
+            self.observation_space = self.dynamic_graph.create_observation_space()
         else:
             self.observation_space = self.get_observation_space()
 
@@ -211,6 +218,65 @@ class Redis(gym.Env):
         edges = np.array(edges[:max_edges], dtype=np.float32)
 
         return adj, edges
+
+    def _fetch_service_graph_dynamic(self):
+        """獲取動態服務圖特徵，支援可變節點數量"""
+        if not self.k8s:
+            # 模擬模式：返回基本的Redis主從結構
+            active_services = ["redis-master", "redis-slave"]
+            
+            # 更新節點映射
+            node_mapping = self.dynamic_graph.update_node_mapping(active_services)
+            
+            # 建構動態邊列表
+            edges = []
+            # 添加 master -> slave 邊
+            if "redis-master" in node_mapping and "redis-slave" in node_mapping:
+                master_idx = node_mapping["redis-master"]
+                slave_idx = node_mapping["redis-slave"]
+                edges.append([master_idx, slave_idx, 1.0, 100.0, 1.0, 0.01, 0])
+            
+            # 使用動態圖空間填充邊特徵
+            edge_array = np.array(edges, dtype=np.float32) if edges else np.zeros((0, 7), dtype=np.float32)
+            
+            return edge_array, len(active_services)
+        
+        # K8s模式：從Kiali獲取實際服務圖
+        from gnnrl.core.utils.kiali_client import fetch_service_graph
+        
+        nodes, edge_df = fetch_service_graph(namespace="redis")
+        
+        # 確保包含基本的Redis服務
+        active_services = list(nodes)
+        for service in DEPLOYMENTS:
+            if service not in active_services:
+                active_services.append(service)
+        
+        # 更新節點映射
+        node_mapping = self.dynamic_graph.update_node_mapping(active_services)
+        
+        # 建構動態邊列表
+        edges = []
+        for _, row in edge_df.iterrows():
+            if row["src"] < len(nodes) and row["dst"] < len(nodes):
+                src_name = nodes[row["src"]]
+                dst_name = nodes[row["dst"]]
+                
+                if src_name in node_mapping and dst_name in node_mapping:
+                    src_idx = node_mapping[src_name]
+                    dst_idx = node_mapping[dst_name]
+                    edges.append([
+                        src_idx, dst_idx, 1.0,
+                        row.get("qps", 0.0),
+                        row.get("p95", 0.0),
+                        row.get("error_rate", 0.0),
+                        0  # 未使用的特徵
+                    ])
+        
+        # 使用動態圖空間填充邊特徵
+        edge_array = np.array(edges, dtype=np.float32) if edges else np.zeros((0, 7), dtype=np.float32)
+        
+        return edge_array, len(active_services)
 
     def step(self, action):
         if self.current_step == 1:
@@ -447,37 +513,82 @@ class Redis(gym.Env):
                 d.transmit_traffic,
             ])
         if self.use_graph:
-            adj, edges = self._fetch_service_graph()
-            max_edges = len(DEPLOYMENTS) * len(DEPLOYMENTS)
-            if edges.shape[0] < max_edges:
-                pad = np.zeros((max_edges - edges.shape[0], edges.shape[1]), dtype=np.float32)
-                edges = np.vstack([edges, pad])
-            edges = edges[:max_edges]
-
+            # 使用動態圖特徵處理
+            features_array = np.array(features, dtype=np.float32)
+            num_active_nodes = len(features)
+            
+            # 填充節點特徵到最大節點數
+            padded_nodes, node_mask = self.dynamic_graph.pad_node_features(features_array, num_active_nodes)
+            
+            # 獲取動態邊特徵
+            edges, num_active_nodes = self._fetch_service_graph_dynamic()
+            padded_edges, edge_mask = self.dynamic_graph.pad_edge_features(edges, len(edges))
+            
+            # 計算全局特徵
+            total_pods = sum(d.num_pods for d in self.deploymentList)
+            avg_cpu = np.mean([d.cpu_usage for d in self.deploymentList])
+            avg_mem = np.mean([d.mem_usage for d in self.deploymentList])
+            total_traffic = sum(d.received_traffic + d.transmit_traffic for d in self.deploymentList)
+            global_features = np.array([total_pods, avg_cpu, avg_mem, total_traffic], dtype=np.float32)
+            
+            # 填充全局特徵
+            padded_global = self.dynamic_graph.pad_global_features(global_features)
+            
+            # 動作遮罩
             mask = self._invalid_action_mask()
 
             return {
-                'svc_df': np.array(features, dtype=np.float32),
-                'node_df': np.zeros((1, 4), dtype=np.float32),
-                'edge_df': np.array(edges, dtype=np.float32),
-                'flat_feats': np.zeros(4, dtype=np.float32),
+                'svc_df': padded_nodes,
+                'node_df': np.zeros((1, 4), dtype=np.float32),  # 保留兼容性
+                'edge_df': padded_edges,
+                'flat_feats': padded_global,
                 'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())
 
     def _invalid_action_mask(self):
-        mask = []
-        for d in self.deploymentList:
-            for action in range(self.num_actions):
-                if action == ACTION_DO_NOTHING:
-                    mask.append(1)
-                elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
-                    n = action
-                    mask.append(1 if d.num_pods + n <= d.max_pods else 0)
-                else:
-                    n = action - 7
-                    mask.append(1 if d.num_pods - n >= d.min_pods else 0)
-        return np.array(mask, dtype=np.float32)
+        if self.use_graph:
+            # 動態圖模式：填充到最大節點數
+            max_nodes = self.dynamic_graph.config.max_nodes
+            mask = []
+            
+            # 為活躍服務生成遮罩
+            for i, d in enumerate(self.deploymentList):
+                if i < max_nodes:
+                    for action in range(self.num_actions):
+                        if action == ACTION_DO_NOTHING:
+                            mask.append(1)
+                        elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                            n = action
+                            mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                        else:
+                            n = action - 7
+                            mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+            
+            # 為非活躍節點填充遮罩
+            inactive_nodes = max_nodes - len(self.deploymentList)
+            for i in range(inactive_nodes):
+                for action in range(self.num_actions):
+                    if action == ACTION_DO_NOTHING:
+                        mask.append(1)
+                    else:
+                        mask.append(0)  # 非活躍節點不能執行其他動作
+                        
+            return np.array(mask, dtype=np.float32)
+        else:
+            # 原始模式
+            mask = []
+            for d in self.deploymentList:
+                for action in range(self.num_actions):
+                    if action == ACTION_DO_NOTHING:
+                        mask.append(1)
+                    elif ACTION_ADD_1_REPLICA <= action <= ACTION_ADD_7_REPLICA:
+                        n = action
+                        mask.append(1 if d.num_pods + n <= d.max_pods else 0)
+                    else:
+                        n = action - 7
+                        mask.append(1 if d.num_pods - n >= d.min_pods else 0)
+            return np.array(mask, dtype=np.float32)
 
     def get_observation_space(self):
         return spaces.Box(
