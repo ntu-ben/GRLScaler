@@ -82,7 +82,7 @@ class RedisLoadUser(HttpUser):
                     "timestamp": str(self.request_count),
                     "action": "browse"
                 }
-                self.redis_client.hmset(session_key, session_data)
+                self.redis_client.hset(session_key, mapping=session_data)
                 self.redis_client.expire(session_key, 1800)  # 30分鐘過期
                 
             elif operation_type == 1:
