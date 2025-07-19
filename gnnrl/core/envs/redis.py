@@ -542,6 +542,8 @@ class Redis(gym.Env):
                 'node_df': np.zeros((1, 4), dtype=np.float32),  # 保留兼容性
                 'edge_df': padded_edges,
                 'flat_feats': padded_global,
+                'node_mask': node_mask,
+                'edge_mask': edge_mask,
                 'invalid_action_mask': mask,
             }
         return tuple(np.array(features).flatten())

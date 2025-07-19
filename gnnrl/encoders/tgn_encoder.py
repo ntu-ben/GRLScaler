@@ -99,10 +99,20 @@ class DynamicTGNEncoder(nn.Module):
             # Return padded output for consistency
             return torch.zeros(self.max_nodes, self.memory_dim, dtype=torch.float32)
         
-        # Extract edge information
-        src = valid_edges[:, 0].long()
-        dst = valid_edges[:, 1].long()
-        edge_features = valid_edges[:, 3:]  # Skip src, dst, active columns
+        # Extract edge information - 處理維度問題
+        if valid_edges.dim() == 1:
+            # 如果只有一條邊但是1維，需要reshape
+            if len(valid_edges) >= 2:
+                src = valid_edges[0:1].long()
+                dst = valid_edges[1:2].long()
+                edge_features = valid_edges[2:] if len(valid_edges) > 2 else torch.zeros(1, 4)
+            else:
+                # 邊數據不足，返回零向量
+                return torch.zeros(self.max_nodes, self.memory_dim, dtype=torch.float32)
+        else:
+            src = valid_edges[:, 0].long()
+            dst = valid_edges[:, 1].long()
+            edge_features = valid_edges[:, 2:] if valid_edges.shape[1] > 2 else torch.zeros(valid_edges.shape[0], 4)
         
         # Ensure src and dst are within valid range
         src = torch.clamp(src, 0, self.max_nodes - 1)
@@ -146,9 +156,14 @@ class DynamicTGNEncoder(nn.Module):
 
     def _create_messages(self, edge_features: torch.Tensor) -> torch.Tensor:
         """Create messages from edge features."""
+        # 確保edge_features是2D張量
+        if edge_features.dim() == 1:
+            edge_features = edge_features.unsqueeze(0)
+        
         if edge_features.shape[1] < self.msg_dim:
             # Pad features to message dimension
-            padding = torch.zeros(len(edge_features), self.msg_dim - edge_features.shape[1])
+            padding = torch.zeros(edge_features.shape[0], self.msg_dim - edge_features.shape[1], 
+                                device=edge_features.device, dtype=edge_features.dtype)
             return torch.cat([edge_features, padding], dim=1)
         else:
             # Truncate to message dimension

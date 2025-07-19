@@ -87,20 +87,25 @@ class HeteroGraphEncoder(nn.Module):
         data = build_hetero_data(svc_df, node_df, edge_df)
 
         if self.model == "tgn":
-            num_nodes = data["svc"].x.size(0)
+            # TGN expects edge_df, svc_df, edge_mask, node_mask
             if self.encoder is None:
-                self.encoder = TGNEncoder(num_nodes, data["svc"].x.size(1), memory_dim=self.out_dim)
-                self.tgn_step = 0
-            edge_index = data["svc", "calls", "svc"].edge_index
-            if edge_index.numel() == 0:
-                return data["svc"].x.mean(dim=0, keepdim=True)
-            src, dst = edge_index
-            # Use real timestep instead of zeros
-            self.tgn_step += 1
-            t = torch.full((src.size(0),), self.tgn_step, device=src.device, dtype=torch.long)
-            emb = self.encoder(src, dst, t, data["svc"].x)
-            self.encoder.update_memory(src, dst, t, emb[src])
-            h = {"svc": emb, "node": data["node"].x}
+                # 從觀察空間獲取正確的維度
+                svc_df_tensor = obs_dict["svc_df"]
+                if isinstance(svc_df_tensor, torch.Tensor) and svc_df_tensor.dim() == 3:
+                    svc_df_tensor = svc_df_tensor[0]
+                
+                max_nodes = svc_df_tensor.shape[0]
+                node_feat_dim = svc_df_tensor.shape[1]
+                self.encoder = TGNEncoder(max_nodes, node_feat_dim, memory_dim=self.out_dim)
+            
+            # 使用動態圖數據
+            edge_df = obs_dict["edge_df"]
+            node_features = obs_dict["svc_df"]
+            edge_mask = obs_dict.get("edge_mask", torch.ones(edge_df.shape[-2] if edge_df.dim() == 3 else edge_df.shape[0]))
+            node_mask = obs_dict.get("node_mask", torch.ones(node_features.shape[-2] if node_features.dim() == 3 else node_features.shape[0]))
+            
+            emb = self.encoder(edge_df, node_features, edge_mask, node_mask)
+            h = {"svc": emb, "node": obs_dict["node_df"]}
         else:
             h = self.encoder(data.x_dict, data.edge_index_dict)
         pooled = []
@@ -109,12 +114,31 @@ class HeteroGraphEncoder(nn.Module):
             if emb is None:
                 emb = data[ntype].x
             if emb.size(-1) < self.out_dim:
-                pad = emb.new_zeros(emb.size(0), self.out_dim - emb.size(-1))
+                # 確保維度匹配
+                pad_shape = list(emb.shape)
+                pad_shape[-1] = self.out_dim - emb.size(-1)
+                pad = emb.new_zeros(pad_shape)
                 emb = torch.cat([emb, pad], dim=-1)
             elif emb.size(-1) > self.out_dim:
                 emb = emb[..., :self.out_dim]
 
-            pooled.append(emb.mean(dim=0))
+            # 確保pooled結果維度一致
+            pooled_emb = emb.mean(dim=0)
+            if pooled_emb.dim() == 0:  # 如果是標量，添加維度
+                pooled_emb = pooled_emb.unsqueeze(0)
+            elif pooled_emb.dim() > 1:  # 如果維度過高，flatten
+                pooled_emb = pooled_emb.flatten()
+            pooled.append(pooled_emb)
 
-        final_embedding = torch.cat(pooled).unsqueeze(0)
+        # 確保所有pooled張量都是1維
+        pooled_tensors = []
+        for p in pooled:
+            if p.dim() == 0:
+                pooled_tensors.append(p.unsqueeze(0))
+            elif p.dim() > 1:
+                pooled_tensors.append(p.flatten())
+            else:
+                pooled_tensors.append(p)
+        
+        final_embedding = torch.cat(pooled_tensors).unsqueeze(0)
         return final_embedding

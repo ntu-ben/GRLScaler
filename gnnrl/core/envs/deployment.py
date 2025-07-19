@@ -351,8 +351,10 @@ class DeploymentStatus:  # Deployment Status (Workload)
         self.pod_names = []
         pods = self.v1.list_namespaced_pod(namespace=self.namespace)
         for p in pods.items:
-            if p.metadata.labels['app'] == self.name:
-                self.pod_names.append(p.metadata.name)
+            # 安全檢查 labels 是否存在
+            if p.metadata.labels and 'app' in p.metadata.labels:
+                if p.metadata.labels['app'] == self.name:
+                    self.pod_names.append(p.metadata.name)
 
         self.cpu_usage = 0
         self.mem_usage = 0

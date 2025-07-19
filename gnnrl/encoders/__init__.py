@@ -1,1 +1,1 @@
-from .tgn_encoder import TGNEncoder
+from .simple_tgn_encoder import TGNEncoder

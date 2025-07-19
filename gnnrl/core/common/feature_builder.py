@@ -41,8 +41,8 @@ def build_hetero_data(svc_df, node_df, edge_df):
             attr = edges[:, 2:].astype(np.float32)
             data["svc", "calls", "svc"].edge_attr = torch.tensor(attr, dtype=torch.float32)
     else:
-        # Create empty edge index if no edges
-        data["svc", "calls", "svc"].edge_index = torch.tensor([[], []], dtype=torch.long)
+        # Create empty edge index if no edges - shape [2, 0]
+        data["svc", "calls", "svc"].edge_index = torch.empty((2, 0), dtype=torch.long)
 
     return data
 

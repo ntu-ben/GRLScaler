@@ -30,7 +30,7 @@ except Exception:  # pragma: no cover - optional dependency
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="gat", choices=["gat", "gcn", "dysat"], help="GNN encoder type")
+    parser.add_argument("--model", default="tgn", choices=["gat", "gcn", "tgn", "dysat"], help="GNN encoder type")
     parser.add_argument("--steps", type=int, default=1_000_00, help="Training steps")
     parser.add_argument("--k8s", action="store_true", help="Interact with a live Kubernetes cluster")
     parser.add_argument("--dataset-path", type=str, default=None, help="Path to dataset CSV file")

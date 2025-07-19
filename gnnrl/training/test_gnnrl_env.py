@@ -91,7 +91,7 @@ def test_gnn_policy():
             action_space=env.action_space,
             lr_schedule=lambda x: 3e-4,
             metadata=metadata,
-            model='gat',
+            model='tgn',
             embed_dim=16
         )
         

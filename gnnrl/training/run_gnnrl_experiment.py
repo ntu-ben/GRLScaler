@@ -21,7 +21,7 @@ Usage:
     python run_gnnrl_experiment.py --k8s --steps 5000
 
     # Custom model and goal
-    python run_gnnrl_experiment.py --k8s --model gat --goal cost --steps 10000
+    python run_gnnrl_experiment.py --k8s --model tgn --goal cost --steps 10000
 
 Requirements:
 - OnlineBoutique deployed in 'onlineboutique' namespace
@@ -199,8 +199,8 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--model', choices=['gat', 'gcn', 'tgn'], default='gat',
-        help='GNN model type (default: gat)'
+        '--model', choices=['gat', 'gcn', 'tgn'], default='tgn',
+        help='GNN model type (default: tgn)'
     )
     
     parser.add_argument(
@@ -234,8 +234,8 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--env-step-interval', type=float, default=15.0,
-        help='Environment step interval in seconds (default: 15.0)'
+        '--env-step-interval', type=float, default=5.0,
+        help='Environment step interval in seconds (default: 5.0)'
     )
 
     parser.add_argument(

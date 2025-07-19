@@ -290,7 +290,11 @@ class UnifiedExperimentManager:
         goal = kwargs.get('goal', 'latency')
         steps = kwargs.get('steps', 5000)
         
-        unified_tag = f"{timestamp}_{experiment}_{algorithm}_{model}_{goal}_{steps}"
+        # 根據 use_case 設置環境標識
+        use_case = kwargs.get('use_case', 'online_boutique')
+        env_tag = 'redis' if use_case == 'redis' else 'ob'
+        
+        unified_tag = f"{timestamp}_{experiment}_{algorithm}_{model}_{goal}_{steps}_{env_tag}"
         run_tag = kwargs.pop('run_tag', unified_tag)
         
         # 準備命令
@@ -566,8 +570,9 @@ class UnifiedExperimentManager:
             # 根據當前使用的namespace添加監控
             if self.namespace:
                 namespaces_to_monitor.append(self.namespace)
+                self.logger.info(f"📊 主要監控 namespace: {self.namespace}")
             
-            # 如果是OnlineBoutique環境，也監控redis和default namespace（如果存在）
+            # 如果是OnlineBoutique環境，也監控redis namespace（如果存在）
             if self.namespace == 'onlineboutique':
                 # 檢查redis namespace是否存在
                 try:
@@ -576,19 +581,13 @@ class UnifiedExperimentManager:
                     ], capture_output=True, text=True)
                     if result.returncode == 0:
                         namespaces_to_monitor.append('redis')
+                        self.logger.info(f"📊 額外監控 redis namespace")
                 except Exception:
                     pass
             
-            # 如果是Redis環境，也監控onlineboutique namespace（如果存在）
+            # Redis環境只監控redis namespace，不額外監控其他namespace避免數據污染
             elif self.namespace == 'redis':
-                try:
-                    result = subprocess.run([
-                        'kubectl', 'get', 'namespace', 'onlineboutique'
-                    ], capture_output=True, text=True)
-                    if result.returncode == 0:
-                        namespaces_to_monitor.append('onlineboutique')
-                except Exception:
-                    pass
+                self.logger.info(f"🗄️ Redis環境：只監控 {self.namespace} namespace，避免數據污染")
             
             if not namespaces_to_monitor:
                 self.logger.warning("⚠️ 未找到可監控的namespace")
@@ -809,9 +808,15 @@ class UnifiedExperimentManager:
         
         # 持續隨機執行場景直到訓練完成或至少執行一個場景
         while True:
-            # 檢查訓練是否完成
+            # 檢查訓練是否完成或失敗
             if has_training_proc and training_proc.poll() is not None:
-                self.logger.info("✅ 訓練進程已完成")
+                exit_code = training_proc.poll()
+                if exit_code == 0:
+                    self.logger.info("✅ 訓練進程成功完成")
+                else:
+                    self.logger.error(f"❌ 訓練進程失敗，退出碼: {exit_code}")
+                    self.logger.error("❌ 由於訓練失敗，停止負載測試")
+                    return []  # 返回空結果表示失敗
                 break
             
             # 隨機選擇場景

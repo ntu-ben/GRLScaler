@@ -1,5 +1,5 @@
 {
-  "generation_time": "2025-07-18 14:17:37",
+  "generation_time": "2025-07-19 11:48:42",
   "applications": {
     "redis": {
       "application": "redis",
@@ -11,63 +11,63 @@
           "summary_statistics": {
             "GNNRL": {
               "method": "GNNRL",
-              "pod_time_area": 180.0,
-              "total_requests": 719760,
-              "req_per_pod_time_area": 3998.6666666666665,
-              "avg_rps": 398.81847743236017,
-              "avg_response_time": 262.1127305042889,
-              "p95_response_time": 410.0,
-              "p99_response_time": 510.0
+              "pod_time_area": 297.0,
+              "total_requests": 1438242,
+              "req_per_pod_time_area": 4842.565656565656,
+              "avg_rps": 0.6935166710025619,
+              "avg_response_time": 52.05185189195325,
+              "p95_response_time": 222.7511086451376,
+              "p99_response_time": 370.45713447389244
             },
             "Gym-HPA": {
               "method": "Gym-HPA",
-              "pod_time_area": 181.0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0.0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
+              "pod_time_area": 337.0,
+              "total_requests": 1438533.0388202667,
+              "req_per_pod_time_area": 4268.644032107616,
+              "avg_rps": 0.6948070882273517,
+              "avg_response_time": 60.6929905061686,
+              "p95_response_time": 237.50986257757205,
+              "p99_response_time": 402.1721603797546
             },
             "K8s-HPA-cpu-20": {
               "method": "K8s-HPA-cpu-20",
               "pod_time_area": 30.0,
-              "total_requests": 719490,
-              "req_per_pod_time_area": 23983.0,
-              "avg_rps": 398.73457256611863,
-              "avg_response_time": 272.6979540392845,
+              "total_requests": 719776,
+              "req_per_pod_time_area": 23992.533333333333,
+              "avg_rps": 398.8340377609471,
+              "avg_response_time": 266.089539184785,
               "p95_response_time": 420.0,
               "p99_response_time": 520.0
             },
             "K8s-HPA-cpu-40": {
               "method": "K8s-HPA-cpu-40",
               "pod_time_area": 30.0,
-              "total_requests": 719576,
-              "req_per_pod_time_area": 23985.866666666665,
-              "avg_rps": 398.83360921203223,
-              "avg_response_time": 274.36256836216893,
-              "p95_response_time": 430.0,
-              "p99_response_time": 540.0
+              "total_requests": 719770,
+              "req_per_pod_time_area": 23992.333333333332,
+              "avg_rps": 398.7735783707847,
+              "avg_response_time": 260.43683065135156,
+              "p95_response_time": 410.0,
+              "p99_response_time": 510.0
             },
             "K8s-HPA-cpu-60": {
               "method": "K8s-HPA-cpu-60",
               "pod_time_area": 30.0,
-              "total_requests": 719768,
-              "req_per_pod_time_area": 23992.266666666666,
-              "avg_rps": 397.6441762658121,
-              "avg_response_time": 262.39568803002567,
+              "total_requests": 719830,
+              "req_per_pod_time_area": 23994.333333333332,
+              "avg_rps": 398.8195122288194,
+              "avg_response_time": 269.7733327778439,
               "p95_response_time": 420.0,
-              "p99_response_time": 510.0
+              "p99_response_time": 520.0
             },
             "K8s-HPA-cpu-80": {
               "method": "K8s-HPA-cpu-80",
               "pod_time_area": 30.0,
-              "total_requests": 719912,
-              "req_per_pod_time_area": 23997.066666666666,
-              "avg_rps": 398.58509516950824,
-              "avg_response_time": 256.4682942382847,
-              "p95_response_time": 410.0,
-              "p99_response_time": 520.0
+              "total_requests": 719624,
+              "req_per_pod_time_area": 23987.466666666667,
+              "avg_rps": 398.73025556057917,
+              "avg_response_time": 272.6661314108757,
+              "p95_response_time": 420.0,
+              "p99_response_time": 510.0
             }
           }
         },
@@ -78,52 +78,62 @@
           "summary_statistics": {
             "GNNRL": {
               "method": "GNNRL",
-              "pod_time_area": 180.0,
-              "total_requests": 540126,
-              "req_per_pod_time_area": 3000.7,
-              "avg_rps": 324.84109510905375,
-              "avg_response_time": 326.7308353173353,
-              "p95_response_time": 570.0,
-              "p99_response_time": 670.0
+              "pod_time_area": 300.0,
+              "total_requests": 0.0,
+              "req_per_pod_time_area": 0.0,
+              "avg_rps": NaN,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            "Gym-HPA": {
+              "method": "Gym-HPA",
+              "pod_time_area": 300.0,
+              "total_requests": 0.0,
+              "req_per_pod_time_area": 0.0,
+              "avg_rps": NaN,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
             },
             "K8s-HPA-cpu-20": {
               "method": "K8s-HPA-cpu-20",
               "pod_time_area": 30.0,
-              "total_requests": 540146,
-              "req_per_pod_time_area": 18004.866666666665,
-              "avg_rps": 294.06750254791183,
-              "avg_response_time": 333.71825300998336,
-              "p95_response_time": 600.0,
-              "p99_response_time": 720.0
+              "total_requests": 540016,
+              "req_per_pod_time_area": 18000.533333333333,
+              "avg_rps": 324.9256722985804,
+              "avg_response_time": 327.98505541485355,
+              "p95_response_time": 570.0,
+              "p99_response_time": 670.0
             },
             "K8s-HPA-cpu-40": {
               "method": "K8s-HPA-cpu-40",
               "pod_time_area": 30.0,
-              "total_requests": 539972,
-              "req_per_pod_time_area": 17999.066666666666,
-              "avg_rps": 324.83987448632837,
-              "avg_response_time": 335.78547206818763,
+              "total_requests": 538450,
+              "req_per_pod_time_area": 17948.333333333332,
+              "avg_rps": 324.66361569163934,
+              "avg_response_time": 326.57724175786063,
               "p95_response_time": 580.0,
-              "p99_response_time": 680.0
+              "p99_response_time": 700.0
             },
             "K8s-HPA-cpu-60": {
               "method": "K8s-HPA-cpu-60",
               "pod_time_area": 30.0,
-              "total_requests": 539890,
-              "req_per_pod_time_area": 17996.333333333332,
-              "avg_rps": 325.29614675481673,
-              "avg_response_time": 328.6773389776637,
-              "p95_response_time": 580.0,
-              "p99_response_time": 680.0
+              "total_requests": 538344,
+              "req_per_pod_time_area": 17944.8,
+              "avg_rps": 293.68534968862406,
+              "avg_response_time": 308.9006662377559,
+              "p95_response_time": 540.0,
+              "p99_response_time": 660.0
             },
             "K8s-HPA-cpu-80": {
               "method": "K8s-HPA-cpu-80",
               "pod_time_area": 30.0,
-              "total_requests": 539834,
-              "req_per_pod_time_area": 17994.466666666667,
-              "avg_rps": 325.1270019062218,
-              "avg_response_time": 329.7548401686752,
-              "p95_response_time": 570.0,
+              "total_requests": 540000,
+              "req_per_pod_time_area": 18000.0,
+              "avg_rps": 325.06851678858834,
+              "avg_response_time": 328.5151020719737,
+              "p95_response_time": 580.0,
               "p99_response_time": 670.0
             }
           }
@@ -135,52 +145,62 @@
           "summary_statistics": {
             "GNNRL": {
               "method": "GNNRL",
-              "pod_time_area": 180.0,
-              "total_requests": 179788,
-              "req_per_pod_time_area": 998.8222222222222,
-              "avg_rps": 99.60203899412873,
-              "avg_response_time": 170.53730895908103,
-              "p95_response_time": 280.0,
-              "p99_response_time": 370.0
+              "pod_time_area": 261.0,
+              "total_requests": 134134,
+              "req_per_pod_time_area": 513.9233716475096,
+              "avg_rps": 0.1524927972984425,
+              "avg_response_time": 2.48890970591767,
+              "p95_response_time": 3.586689429973012,
+              "p99_response_time": 33.013605797187886
+            },
+            "Gym-HPA": {
+              "method": "Gym-HPA",
+              "pod_time_area": 262.0,
+              "total_requests": 134420,
+              "req_per_pod_time_area": 513.0534351145038,
+              "avg_rps": 0.15270257299025988,
+              "avg_response_time": 2.525048893737112,
+              "p95_response_time": 3.452826960273769,
+              "p99_response_time": 32.43878887070377
             },
             "K8s-HPA-cpu-20": {
               "method": "K8s-HPA-cpu-20",
               "pod_time_area": 30.0,
               "total_requests": 179976,
               "req_per_pod_time_area": 5999.2,
-              "avg_rps": 99.58912935870484,
-              "avg_response_time": 180.1469295047492,
+              "avg_rps": 99.70870173487792,
+              "avg_response_time": 173.71085062953378,
               "p95_response_time": 290.0,
-              "p99_response_time": 390.0
+              "p99_response_time": 380.0
             },
             "K8s-HPA-cpu-40": {
               "method": "K8s-HPA-cpu-40",
               "pod_time_area": 30.0,
-              "total_requests": 179996,
-              "req_per_pod_time_area": 5999.866666666667,
-              "avg_rps": 99.60627826045672,
-              "avg_response_time": 178.79713536410907,
+              "total_requests": 179988,
+              "req_per_pod_time_area": 5999.6,
+              "avg_rps": 99.6502920545538,
+              "avg_response_time": 177.63543107259295,
               "p95_response_time": 290.0,
               "p99_response_time": 380.0
             },
             "K8s-HPA-cpu-60": {
               "method": "K8s-HPA-cpu-60",
               "pod_time_area": 30.0,
-              "total_requests": 179982,
-              "req_per_pod_time_area": 5999.4,
-              "avg_rps": 99.6068243048632,
-              "avg_response_time": 180.7762166416721,
-              "p95_response_time": 290.0,
-              "p99_response_time": 380.0
+              "total_requests": 179798,
+              "req_per_pod_time_area": 5993.266666666666,
+              "avg_rps": 99.61115548568098,
+              "avg_response_time": 173.996766161281,
+              "p95_response_time": 280.0,
+              "p99_response_time": 370.0
             },
             "K8s-HPA-cpu-80": {
               "method": "K8s-HPA-cpu-80",
               "pod_time_area": 30.0,
-              "total_requests": 179964,
-              "req_per_pod_time_area": 5998.8,
-              "avg_rps": 99.40285179053316,
-              "avg_response_time": 181.57231289134128,
-              "p95_response_time": 290.0,
+              "total_requests": 179968,
+              "req_per_pod_time_area": 5998.933333333333,
+              "avg_rps": 99.5081335196379,
+              "avg_response_time": 174.48796107375716,
+              "p95_response_time": 280.0,
               "p99_response_time": 380.0
             }
           }
@@ -192,53 +212,63 @@
           "summary_statistics": {
             "GNNRL": {
               "method": "GNNRL",
-              "pod_time_area": 180.0,
-              "total_requests": 603716,
-              "req_per_pod_time_area": 3353.9777777777776,
-              "avg_rps": 335.2434250581589,
-              "avg_response_time": 350.7954963827515,
-              "p95_response_time": 610.0,
-              "p99_response_time": 720.0
+              "pod_time_area": 300.0,
+              "total_requests": 0.0,
+              "req_per_pod_time_area": 0.0,
+              "avg_rps": NaN,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            "Gym-HPA": {
+              "method": "Gym-HPA",
+              "pod_time_area": 300.0,
+              "total_requests": 0.0,
+              "req_per_pod_time_area": 0.0,
+              "avg_rps": NaN,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
             },
             "K8s-HPA-cpu-20": {
               "method": "K8s-HPA-cpu-20",
               "pod_time_area": 30.0,
-              "total_requests": 605284,
-              "req_per_pod_time_area": 20176.133333333335,
-              "avg_rps": 336.02555042808075,
-              "avg_response_time": 355.3623769480239,
+              "total_requests": 605274,
+              "req_per_pod_time_area": 20175.8,
+              "avg_rps": 320.7307479053491,
+              "avg_response_time": 337.8105485440729,
               "p95_response_time": 590.0,
-              "p99_response_time": 690.0
+              "p99_response_time": 710.0
             },
             "K8s-HPA-cpu-40": {
               "method": "K8s-HPA-cpu-40",
               "pod_time_area": 30.0,
-              "total_requests": 603930,
-              "req_per_pod_time_area": 20131.0,
-              "avg_rps": 320.1080080413407,
-              "avg_response_time": 357.1093640294114,
+              "total_requests": 604000,
+              "req_per_pod_time_area": 20133.333333333332,
+              "avg_rps": 335.60603812372403,
+              "avg_response_time": 354.2481142956814,
               "p95_response_time": 600.0,
-              "p99_response_time": 710.0
+              "p99_response_time": 700.0
             },
             "K8s-HPA-cpu-60": {
               "method": "K8s-HPA-cpu-60",
               "pod_time_area": 30.0,
-              "total_requests": 605190,
-              "req_per_pod_time_area": 20173.0,
-              "avg_rps": 321.02704267898685,
-              "avg_response_time": 357.25933018624096,
-              "p95_response_time": 600.0,
+              "total_requests": 605272,
+              "req_per_pod_time_area": 20175.733333333334,
+              "avg_rps": 335.9091369383912,
+              "avg_response_time": 349.4745202089972,
+              "p95_response_time": 590.0,
               "p99_response_time": 700.0
             },
             "K8s-HPA-cpu-80": {
               "method": "K8s-HPA-cpu-80",
               "pod_time_area": 30.0,
-              "total_requests": 605328,
-              "req_per_pod_time_area": 20177.6,
-              "avg_rps": 321.3173977823197,
-              "avg_response_time": 349.90480080031114,
-              "p95_response_time": 580.0,
-              "p99_response_time": 680.0
+              "total_requests": 603952,
+              "req_per_pod_time_area": 20131.733333333334,
+              "avg_rps": 335.140393043093,
+              "avg_response_time": 354.0483968200564,
+              "p95_response_time": 600.0,
+              "p99_response_time": 710.0
             }
           }
         }

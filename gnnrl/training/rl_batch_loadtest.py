@@ -320,7 +320,7 @@ def main() -> None:
         ap.add_argument("--rl-path")          # 可手動覆蓋 repo
         ap.add_argument("--run-tag")
         ap.add_argument("--alg", choices=["ppo", "recurrent_ppo", "a2c"], default="ppo")
-        ap.add_argument("--gnn-model", choices=["gat", "gcn"], default="gat", help="GNN model type for gnnrl experiments")
+        ap.add_argument("--gnn-model", choices=["gat", "gcn", "tgn"], default="tgn", help="GNN model type for gnnrl experiments")
         ap.add_argument("--k8s", action="store_true")
         ap.add_argument("--use-case", default="redis")
         ap.add_argument("--goal", default="cost")
@@ -331,7 +331,7 @@ def main() -> None:
         ap.add_argument("--steps", type=int, default=500)
         ap.add_argument("--total-steps", type=int, default=5000)
         ap.add_argument("--seed", type=int, default=42, help="Random seed for scenario order")
-        ap.add_argument("--env-step-interval", type=float, default=15.0, help="Environment step interval in seconds")
+        ap.add_argument("--env-step-interval", type=float, default=5.0, help="Environment step interval in seconds")
         ap.add_argument("--tensorboard-log")
         ap.add_argument("--device", choices=["auto", "cpu", "cuda", "mps"])
         args = ap.parse_args(

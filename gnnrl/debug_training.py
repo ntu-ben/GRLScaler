@@ -70,7 +70,7 @@ def debug_training():
         
         policy_kwargs = {
             'metadata': metadata,
-            'model': 'gat',
+            'model': 'tgn',
             'embed_dim': 16,
         }
         

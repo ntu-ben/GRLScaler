@@ -138,9 +138,9 @@ def main():
     parser.add_argument('--goal', default='latency', 
                        choices=['latency', 'cost'],
                        help='優化目標 (預設: latency)')
-    parser.add_argument('--model', default='gat',
+    parser.add_argument('--model', default='tgn',
                        choices=['gat', 'gcn', 'tgn', 'sage'], 
-                       help='GNNRL 模型類型 (預設: gat)')
+                       help='GNNRL 模型類型 (預設: tgn)')
     parser.add_argument('--algorithm', default='ppo',
                        choices=['ppo', 'a2c'],
                        help='RL算法選擇 (預設: ppo, gym-hpa也會使用此設定)')

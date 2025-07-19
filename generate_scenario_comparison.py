@@ -64,6 +64,12 @@ class ScenarioComparisonGenerator:
 
     def detect_experiment_application(self, experiment_dir: Path) -> str:
         """檢測實驗目錄是針對哪個應用"""
+        # 優先檢查環境標識 (_redis 或 _ob)
+        if "_redis" in experiment_dir.name:
+            return "redis"
+        elif "_ob" in experiment_dir.name:
+            return "onlineboutique"
+            
         # 檢查目錄名是否包含redis
         if "redis" in experiment_dir.name.lower():
             return "redis"
