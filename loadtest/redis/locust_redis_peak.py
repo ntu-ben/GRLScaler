@@ -10,10 +10,10 @@ import redis
 import time
 import os
 import logging
-from locust import HttpUser, task, constant_throughput, LoadTestShape
+from locust import User, task, constant_throughput, LoadTestShape
 from locust.exception import StopUser
 
-class StableRedisUser(HttpUser):
+class StableRedisUser(User):
     """穩定的 Redis 負載測試用戶，每個用戶每秒固定1個請求"""
     
     # 每個用戶每秒固定1個請求，確保RPS = 用戶數
@@ -57,22 +57,16 @@ class StableRedisUser(HttpUser):
         
         try:
             result = self.redis_client.get(key)
-            # 使用 HTTP 格式記錄，方便 Locust 統計
+            # 記錄成功統計
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_GET",
-                name=f"GET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(str(result)) if result else 0,
-                exception=None,
+                request_type="Redis", name="GET", response_time=total_time, response_length=len(str(result)) if result else 0, exception=None
             )
             self.request_count += 1
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_GET",
-                name=f"GET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="GET", response_time=total_time, response_length=0, exception=e
             )
             self.failure_count += 1
             logging.warning(f"Redis GET 失敗: {e}, 但繼續測試")
@@ -86,21 +80,15 @@ class StableRedisUser(HttpUser):
         
         try:
             self.redis_client.set(key, value, ex=300)  # 5分鐘過期
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_SET",
-                name=f"SET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(value),
-                exception=None,
+                request_type="Redis", name="SET", response_time=total_time, response_length=len(value), exception=None
             )
             self.request_count += 1
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_SET",
-                name=f"SET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="SET", response_time=total_time, response_length=0, exception=e
             )
             self.failure_count += 1
             logging.warning(f"Redis SET 失敗: {e}, 但繼續測試")
@@ -121,21 +109,15 @@ class StableRedisUser(HttpUser):
                 result = self.redis_client.rpop(list_key)
                 operation = "RPOP"
                 
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type=f"REDIS_{operation}",
-                name=f"{operation} {list_key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(value),
-                exception=None,
+                request_type="Redis", name="LIST", response_time=total_time, response_length=len(value), exception=None
             )
             self.request_count += 1
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_LIST",
-                name=f"LIST {list_key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="LIST", response_time=total_time, response_length=0, exception=e
             )
             self.failure_count += 1
             logging.warning(f"Redis LIST 操作失敗: {e}, 但繼續測試")
@@ -156,21 +138,15 @@ class StableRedisUser(HttpUser):
                 result = self.redis_client.hget(hash_key, field)
                 operation = "HGET"
                 
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type=f"REDIS_{operation}",
-                name=f"{operation} {hash_key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(value),
-                exception=None,
+                request_type="Redis", name="HASH", response_time=total_time, response_length=len(value), exception=None
             )
             self.request_count += 1
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_HASH",
-                name=f"HASH {hash_key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="HASH", response_time=total_time, response_length=0, exception=e
             )
             self.failure_count += 1
             logging.warning(f"Redis HASH 操作失敗: {e}, 但繼續測試")
@@ -182,7 +158,7 @@ class RedisPeakShape(LoadTestShape):
         super().__init__()
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
-        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "800"))  # 固定800 RPS (Redis高性能)
+        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "2000"))  # 固定2000 RPS (Redis高性能)
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
         print(f"🔧 Redis Peak壓測配置:")

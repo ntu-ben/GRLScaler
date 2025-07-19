@@ -7,13 +7,13 @@ Redis OffPeak Load Test
 
 import random
 import redis
-from locust import HttpUser, task, between, LoadTestShape
+from locust import User, task, between, LoadTestShape
 from locust.exception import StopUser
 import time
 import os
 import logging
 
-class RedisOffPeakUser(HttpUser):
+class RedisOffPeakUser(User):
     """Redis 低峰負載測試用戶"""
     wait_time = between(1, 3)  # 1-3秒間隔，模擬低峰
     
@@ -48,20 +48,14 @@ class RedisOffPeakUser(HttpUser):
         
         try:
             result = self.redis_client.get(key)
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_GET",
-                name=f"GET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(str(result)) if result else 0,
-                exception=None,
+                request_type="Redis", name="GET", response_time=total_time, response_length=len(str(result)) if result else 0, exception=None
             )
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_GET",
-                name=f"GET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="GET", response_time=total_time, response_length=0, exception=e
             )
     
     @task(30)
@@ -73,20 +67,14 @@ class RedisOffPeakUser(HttpUser):
         
         try:
             self.redis_client.set(key, value, ex=600)  # 10分鐘過期
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_SET",
-                name=f"SET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(value),
-                exception=None,
+                request_type="Redis", name="SET", response_time=total_time, response_length=len(value), exception=None
             )
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_SET",
-                name=f"SET {key}",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="SET", response_time=total_time, response_length=0, exception=e
             )
     
     @task(20)
@@ -97,20 +85,14 @@ class RedisOffPeakUser(HttpUser):
         try:
             # 簡單的 INFO 命令
             info = self.redis_client.info('memory')
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_INFO",
-                name="INFO memory",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=len(str(info)),
-                exception=None,
+                request_type="Redis", name="INFO", response_time=total_time, response_length=len(str(info)), exception=None
             )
         except Exception as e:
+            total_time = int((time.time() - start_time) * 1000)
             self.environment.events.request.fire(
-                request_type="REDIS_INFO",
-                name="INFO memory",
-                response_time=(time.time() - start_time) * 1000,
-                response_length=0,
-                exception=e,
+                request_type="Redis", name="INFO", response_time=total_time, response_length=0, exception=e
             )
 
 class RedisOffPeakShape(LoadTestShape):
@@ -120,7 +102,7 @@ class RedisOffPeakShape(LoadTestShape):
         super().__init__()
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
-        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "150"))  # 固定150 RPS (Redis離峰)
+        self.target_rps = int(os.getenv("LOCUST_TARGET_RPS", "500"))  # 固定500 RPS (Redis離峰)
         self.target_users = self.target_rps  # 用戶數 = RPS (每用戶每秒1請求)
         
         print(f"🔧 Redis OffPeak壓測配置:")

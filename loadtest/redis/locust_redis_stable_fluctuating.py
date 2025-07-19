@@ -1,9 +1,10 @@
-from locust import HttpUser, task, constant_throughput, LoadTestShape
+from locust import User, task, constant_throughput, LoadTestShape
 import os
 import logging
 import redis
+import time
 
-class StableRedisUser(HttpUser):
+class StableRedisUser(User):
     """穩定Redis負載測試用戶 - 波動模式"""
     
     # 每個用戶每秒固定1個請求，確保RPS = 用戶數

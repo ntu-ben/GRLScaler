@@ -1,9 +1,10 @@
-from locust import HttpUser, task, constant_throughput, LoadTestShape
+from locust import User, task, constant_throughput, LoadTestShape
 import os
 import logging
 import redis
+import time
 
-class RedisLoadUser(HttpUser):
+class RedisLoadUser(User):
     """Redis負載測試用戶 - 波動模式"""
     
     # 每個用戶每秒固定1個請求，確保RPS = 用戶數
@@ -37,6 +38,7 @@ class RedisLoadUser(HttpUser):
             return
             
         self.request_count += 1
+        start_time = time.time()
         
         try:
             # 波動模式：混合讀取操作
@@ -58,8 +60,18 @@ class RedisLoadUser(HttpUser):
                 counter_key = f"counter:{self.request_count % 50}"
                 counter_value = self.redis_client.get(counter_key)
             
+            # 記錄成功統計
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="GET", response_time=total_time, response_length=0, exception=None
+            )
+            
         except Exception as e:
             self.failure_count += 1
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="GET", response_time=total_time, response_length=0, exception=e
+            )
             logging.warning(f"Redis GET操作失敗: {e}")
     
     @task(3)
@@ -69,6 +81,7 @@ class RedisLoadUser(HttpUser):
             return
             
         self.request_count += 1
+        start_time = time.time()
         
         try:
             # 波動模式：混合寫入操作
@@ -97,8 +110,18 @@ class RedisLoadUser(HttpUser):
                 self.redis_client.incr(counter_key)
                 self.redis_client.expire(counter_key, 3600)  # 1小時過期
             
+            # 記錄成功統計
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="SET", response_time=total_time, response_length=0, exception=None
+            )
+            
         except Exception as e:
             self.failure_count += 1
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="SET", response_time=total_time, response_length=0, exception=e
+            )
             logging.warning(f"Redis SET操作失敗: {e}")
     
     @task(2)
@@ -108,6 +131,7 @@ class RedisLoadUser(HttpUser):
             return
             
         self.request_count += 1
+        start_time = time.time()
         
         try:
             # 波動模式：隊列操作
@@ -124,8 +148,18 @@ class RedisLoadUser(HttpUser):
                 # 彈出操作
                 self.redis_client.rpop(queue_key)
             
+            # 記錄成功統計
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="LIST", response_time=total_time, response_length=0, exception=None
+            )
+            
         except Exception as e:
             self.failure_count += 1
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="LIST", response_time=total_time, response_length=0, exception=e
+            )
             logging.warning(f"Redis LIST操作失敗: {e}")
     
     @task(1)
@@ -135,6 +169,7 @@ class RedisLoadUser(HttpUser):
             return
             
         self.request_count += 1
+        start_time = time.time()
         
         try:
             # 波動模式：排行榜操作
@@ -148,8 +183,18 @@ class RedisLoadUser(HttpUser):
             # 保留top 100
             self.redis_client.zremrangebyrank(leaderboard_key, 0, -101)
             
+            # 記錄成功統計
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="ZSET", response_time=total_time, response_length=0, exception=None
+            )
+            
         except Exception as e:
             self.failure_count += 1
+            total_time = int((time.time() - start_time) * 1000)
+            self.environment.events.request.fire(
+                request_type="Redis", name="ZSET", response_time=total_time, response_length=0, exception=e
+            )
             logging.warning(f"Redis ZSET操作失敗: {e}")
 
 class FluctuatingShape(LoadTestShape):
@@ -160,19 +205,19 @@ class FluctuatingShape(LoadTestShape):
         # 從環境變數讀取配置
         self.run_time_seconds = self._parse_time(os.getenv("LOCUST_RUN_TIME", "15m"))
         
-        # 四階段RPS配置 [低峰, 中峰, 低峰, 高峰] - Redis版本
+        # 四階段RPS配置 [低峰, 中峰, 低峰, 高峰] - 參考OnlineBoutique設計
         self.phase_rps = [
-            int(os.getenv("LOCUST_PHASE1_RPS", "200")),   # 第1階段: 200 RPS
-            int(os.getenv("LOCUST_PHASE2_RPS", "600")),  # 第2階段: 600 RPS
-            int(os.getenv("LOCUST_PHASE3_RPS", "200")),   # 第3階段: 200 RPS
-            int(os.getenv("LOCUST_PHASE4_RPS", "900"))   # 第4階段: 900 RPS
+            int(os.getenv("LOCUST_PHASE1_RPS", "500")),   # 第1階段: 500 RPS (低峰)
+            int(os.getenv("LOCUST_PHASE2_RPS", "2000")),  # 第2階段: 2000 RPS (中峰)
+            int(os.getenv("LOCUST_PHASE3_RPS", "500")),   # 第3階段: 500 RPS (低峰)
+            int(os.getenv("LOCUST_PHASE4_RPS", "4000"))   # 第4階段: 4000 RPS (高峰)
         ]
         
         self.phase_duration = self.run_time_seconds / 4  # 每個階段平均分配時間
         
-        print(f"🔧 Redis波動模式配置:")
+        print(f"🔧 Redis波動模式配置 (參考OnlineBoutique):")
         print(f"   ⏱️  運行時間: {self.run_time_seconds}秒")
-        print(f"   📊 四階段RPS: {self.phase_rps}")
+        print(f"   📊 四階段RPS: {self.phase_rps} [低峰-中峰-低峰-高峰]")
         print(f"   ⏳ 每階段時長: {self.phase_duration:.0f}秒")
     
     def _parse_time(self, time_str):
@@ -201,7 +246,7 @@ class FluctuatingShape(LoadTestShape):
         
         target_users = self.phase_rps[phase]
         
-        # 穩定用戶數，確保無抖動
+        # OnlineBoutique風格: 穩定用戶數，確保無抖動
         return (target_users, target_users)
 
 # 設置日誌
