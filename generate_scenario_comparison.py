@@ -33,22 +33,40 @@ class ScenarioComparisonGenerator:
         # 場景定義
         self.scenarios = ["offpeak", "rushsale", "peak", "fluctuating"]
         self.applications = ["redis", "onlineboutique"]
-        self.methods = ["GNNRL", "Gym-HPA"]
-        self.k8s_hpa_configs = ["cpu-20", "cpu-40", "cpu-60", "cpu-80"]  # 4種CPU配置
-        # 擴展方法列表，包含4種K8s-HPA配置
-        self.all_methods = self.methods + [f"K8s-HPA-{config}" for config in self.k8s_hpa_configs]
+        self.methods = ["GNNRL-GAT", "GNNRL-GCN", "GNNRL-TGN", "Gym-HPA"]
+        # K8s-HPA配置 - 根據應用不同使用不同配置
+        self.redis_k8s_hpa_configs = ["mem-20", "mem-40", "mem-60", "mem-80"]  # Redis使用memory配置
+        self.onlineboutique_k8s_hpa_configs = ["cpu-20", "cpu-40", "cpu-60", "cpu-80"]  # OnlineBoutique使用CPU配置
+        # 方法列表現在只包含最佳K8s-HPA配置
+        self.all_methods = self.methods + ["K8s-HPA"]
         
         # 應用特定的方法目錄映射
         self.app_method_mapping = {
             "redis": {
-                "GNNRL": "gnnrl",  # 需要找到Redis的GNNRL實驗
+                "GNNRL-GAT": "gnnrl",  # Redis只有一種GNNRL實驗
+                "GNNRL-GCN": "gnnrl",  # Redis只有一種GNNRL實驗
+                "GNNRL-TGN": "gnnrl",  # Redis只有一種GNNRL實驗  
                 "Gym-HPA": "gym-hpa",
                 "K8s-HPA": "k8s_hpa_redis"
             },
             "onlineboutique": {
-                "GNNRL": "gnnrl", 
+                "GNNRL-GAT": "gnnrl",  # OnlineBoutique有GAT、GCN和TGN三種
+                "GNNRL-GCN": "gnnrl",  # OnlineBoutique有GAT、GCN和TGN三種
+                "GNNRL-TGN": "gnnrl",  # OnlineBoutique有GAT、GCN和TGN三種
                 "Gym-HPA": "gym-hpa",
                 "K8s-HPA": "k8s-hpa"
+            }
+        }
+        
+        # GNNRL變體對應的特定實驗目錄
+        self.gnnrl_specific_experiments = {
+            "redis": {
+                "GNNRL-TGN": "gnnrl_redis_test_seed42_20250720_190608"   # Redis只有TGN
+            },
+            "onlineboutique": {
+                "GNNRL-GAT": "gnnrl_gat_test_seed42_20250723_043645",  # GAT實驗 (最新7/23)
+                "GNNRL-GCN": "gnnrl_gcn_test_seed42_20250728_100353",  # GCN實驗 (最新7/28)
+                "GNNRL-TGN": "gnnrl_tgn_test_seed42_20250723_023713"   # TGN實驗 (最新7/23)
             }
         }
         
@@ -62,8 +80,22 @@ class ScenarioComparisonGenerator:
         print(f"🎯 場景對比可視化生成器初始化完成（修正版）")
         print(f"📁 輸出目錄: {self.output_dir}")
 
+    def get_k8s_hpa_configs(self, application: str) -> List[str]:
+        """根據應用獲取對應的K8s-HPA配置"""
+        if application == "redis":
+            return self.redis_k8s_hpa_configs
+        else:  # onlineboutique
+            return self.onlineboutique_k8s_hpa_configs
+
     def detect_experiment_application(self, experiment_dir: Path) -> str:
         """檢測實驗目錄是針對哪個應用"""
+        # 首先檢查是否在特殊映射中
+        dir_name = experiment_dir.name
+        for app, methods in self.gnnrl_specific_experiments.items():
+            for method, specific_dir in methods.items():
+                if dir_name == specific_dir:
+                    return app
+        
         # 優先檢查環境標識 (_redis 或 _ob)
         if "_redis" in experiment_dir.name:
             return "redis"
@@ -94,20 +126,26 @@ class ScenarioComparisonGenerator:
         # 檢查子目錄中的場景文件
         for scenario_dir in experiment_dir.iterdir():
             if scenario_dir.is_dir():
-                # 檢查stats文件內容
-                stats_file = scenario_dir / f"{scenario_dir.name.split('_')[0]}_stats_history.csv"
-                if stats_file.exists():
-                    try:
-                        df = pd.read_csv(stats_file, nrows=5)
-                        if 'Name' in df.columns:
-                            # 檢查請求URL路徑
-                            name_values = df['Name'].dropna().astype(str)
-                            if any('/cart' in name or '/checkout' in name for name in name_values):
-                                return "onlineboutique"
-                            elif any('redis' in name.lower() for name in name_values):
-                                return "redis"
-                    except:
-                        continue
+                # 檢查stats文件內容（優先檢查stats.csv，再檢查stats_history.csv）
+                scenario_name = scenario_dir.name.split('_')[0]
+                stats_files = [
+                    scenario_dir / f"{scenario_name}_stats.csv",
+                    scenario_dir / f"{scenario_name}_stats_history.csv"
+                ]
+                
+                for stats_file in stats_files:
+                    if stats_file.exists():
+                        try:
+                            df = pd.read_csv(stats_file, nrows=5)
+                            if 'Name' in df.columns:
+                                # 檢查請求URL路徑
+                                name_values = df['Name'].dropna().astype(str)
+                                if any('/cart' in name or '/checkout' in name for name in name_values):
+                                    return "onlineboutique"
+                                elif any('redis' in name.lower() for name in name_values):
+                                    return "redis"
+                        except:
+                            continue
         
         # 默認根據時間推測（7/12前為redis，7/12後為onlineboutique）
         timestamp_match = re.search(r'(\d{8})', experiment_dir.name)
@@ -158,9 +196,20 @@ class ScenarioComparisonGenerator:
             print(f"❌ 方法目錄不存在: {method_dir}")
             return None
             
+        # 對於GNNRL變體，使用特定的實驗目錄
+        if method in ["GNNRL-GAT", "GNNRL-GCN", "GNNRL-TGN"]:
+            specific_dir = self.gnnrl_specific_experiments[application][method]
+            experiment_dir = method_dir / specific_dir
+            if experiment_dir.exists():
+                print(f"🎯 使用指定的 {method} 實驗: {specific_dir}")
+                return experiment_dir
+            else:
+                print(f"❌ 未找到指定的 {method} 實驗目錄: {specific_dir}")
+                return None
+            
         # 根據不同方法和應用尋找實驗目錄
         if application == "redis":
-            if method == "GNNRL":
+            if method == "GNNRL":  # 兼容性保留
                 # Redis GNNRL實驗需要特殊處理，因為目前沒有實際的Redis GNNRL測試數據
                 # 檢查是否有Redis相關的GNNRL實驗
                 redis_gnnrl_dirs = []
@@ -275,8 +324,56 @@ class ScenarioComparisonGenerator:
                     print(f"⚠️ 讀取 {kiali_file} 失敗: {e}")
         
         if pod_data:
-            return pd.DataFrame(pod_data)
+            df = pd.DataFrame(pod_data)
+            # 如果數據點太少，進行插值填充
+            if len(df) < 15:
+                return self.interpolate_pod_data(df)
+            return df
         return None
+
+    def interpolate_pod_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """對Pod數據進行插值填充，生成每分鐘的數據點"""
+        if df.empty:
+            return df
+            
+        # 創建每分鐘的時間點
+        time_points = list(range(16))
+        result_data = []
+        
+        for minute in time_points:
+            # 找到最接近的數據點進行插值
+            if minute in df['time_minutes'].values:
+                # 精確匹配
+                pod_count = df[df['time_minutes'] == minute]['pods'].iloc[0]
+            else:
+                # 線性插值
+                before_points = df[df['time_minutes'] <= minute]
+                after_points = df[df['time_minutes'] > minute]
+                
+                if not before_points.empty and not after_points.empty:
+                    # 兩邊都有數據點，進行線性插值
+                    t1, p1 = before_points.iloc[-1]['time_minutes'], before_points.iloc[-1]['pods']
+                    t2, p2 = after_points.iloc[0]['time_minutes'], after_points.iloc[0]['pods']
+                    
+                    # 線性插值公式
+                    pod_count = p1 + (p2 - p1) * (minute - t1) / (t2 - t1)
+                    pod_count = int(round(pod_count))
+                elif not before_points.empty:
+                    # 只有前面的數據點，使用最後一個值
+                    pod_count = before_points.iloc[-1]['pods']
+                elif not after_points.empty:
+                    # 只有後面的數據點，使用第一個值
+                    pod_count = after_points.iloc[0]['pods']
+                else:
+                    # 沒有數據點，使用默認值
+                    pod_count = 1
+            
+            result_data.append({
+                'time_minutes': minute,
+                'pods': pod_count
+            })
+        
+        return pd.DataFrame(result_data)
 
     def extract_rps_data(self, experiment_dir: Path, scenario: str, application: str) -> Optional[pd.DataFrame]:
         """從實驗目錄中提取RPS數據"""
@@ -447,10 +544,14 @@ class ScenarioComparisonGenerator:
     def _extract_from_scenario_pod_monitoring_csv(self, experiment_dir: Path, scenario: str) -> Optional[pd.DataFrame]:
         """從scenario目錄中的Pod監控CSV文件提取數據"""
         try:
-            # 查找scenario目錄
+            # 查找scenario目錄，支持K8s-HPA Redis的直接目錄結構
             scenario_dirs = list(experiment_dir.glob(f"{scenario}_*"))
             if not scenario_dirs:
-                return None
+                # 對於K8s-HPA Redis，直接檢查scenario目錄（無後綴）
+                scenario_dir = experiment_dir / scenario
+                if not scenario_dir.exists():
+                    return None
+                scenario_dirs = [scenario_dir]
             
             # 使用第一個匹配的scenario目錄
             scenario_dir = scenario_dirs[0]
@@ -464,16 +565,17 @@ class ScenarioComparisonGenerator:
             if not csv_files:
                 return None
             
-            # 合併所有namespace的Pod數據
+            # 合併所有namespace的Pod數據，保留精確時間戳
             all_pod_data = []
             
             for csv_file in csv_files:
                 try:
                     df = pd.read_csv(csv_file)
                     if 'elapsed_minutes' in df.columns and 'pod_count' in df.columns:
+                        # 保留原始精確時間，不進行分鐘級別聚合
                         all_pod_data.extend([{
-                            'time_minutes': row['elapsed_minutes'],
-                            'pods': row['pod_count']
+                            'elapsed_minutes': row['elapsed_minutes'],
+                            'pod_count': row['pod_count']
                         } for _, row in df.iterrows() if row['elapsed_minutes'] <= 15])
                 except Exception as e:
                     print(f"⚠️ 讀取Pod監控CSV失敗 {csv_file}: {e}")
@@ -482,29 +584,19 @@ class ScenarioComparisonGenerator:
             if not all_pod_data:
                 return None
             
-            # 按時間聚合Pod數據（同一時間點的總Pod數）
+            # 按時間戳聚合同一時間點的Pod數據（多個namespace的總和）
             df = pd.DataFrame(all_pod_data)
-            aggregated_data = []
+            # 按elapsed_minutes分組，對pod_count求和
+            grouped_df = df.groupby('elapsed_minutes')['pod_count'].sum().reset_index()
             
-            for minute in range(16):
-                minute_data = df[(df['time_minutes'] >= minute) & 
-                               (df['time_minutes'] < minute + 1)]
-                if not minute_data.empty:
-                    total_pods = minute_data['pods'].sum()  # 所有namespace的Pod總數
-                    aggregated_data.append({
-                        'time_minutes': minute,
-                        'pods': int(total_pods)
-                    })
-                else:
-                    # 使用前一分鐘的值或默認值
-                    prev_pods = aggregated_data[-1]['pods'] if aggregated_data else 1
-                    aggregated_data.append({
-                        'time_minutes': minute,
-                        'pods': prev_pods
-                    })
+            # 標準化列名
+            grouped_df = grouped_df.rename(columns={
+                'elapsed_minutes': 'time_minutes',
+                'pod_count': 'pods'
+            })
             
-            print(f"✅ 從scenario Pod監控CSV提取到 {len(aggregated_data)} 個數據點")
-            return pd.DataFrame(aggregated_data)
+            print(f"✅ 從scenario Pod監控CSV提取到 {len(grouped_df)} 個精確數據點")
+            return grouped_df
             
         except Exception as e:
             print(f"⚠️ scenario Pod監控CSV數據提取失敗: {e}")
@@ -549,10 +641,10 @@ class ScenarioComparisonGenerator:
                 minute_data = df[(df['time_minutes'] >= minute) & 
                                (df['time_minutes'] < minute + 1)]
                 if not minute_data.empty:
-                    total_pods = minute_data['pods'].sum()  # 所有namespace的Pod總數
+                    avg_pods = minute_data['pods'].mean()  # 同一時間點的平均Pod數
                     aggregated_data.append({
                         'time_minutes': minute,
-                        'pods': int(total_pods)
+                        'pods': int(round(avg_pods))
                     })
                 else:
                     # 使用前一分鐘的值或默認值
@@ -630,46 +722,18 @@ class ScenarioComparisonGenerator:
         } for minute in range(16)])
 
 
-    def collect_scenario_data(self, application: str, scenario: str) -> Dict:
-        """收集指定應用和場景的所有方法數據，包含K8s-HPA各配置"""
-        scenario_data = {
-            'application': application,
-            'scenario': scenario,
-            'methods': {}
-        }
-        
-        # 收集GNNRL和Gym-HPA數據
-        for method in self.methods:
-            print(f"📊 收集 {method} - {application} - {scenario} 數據...")
-            
-            experiment_dir = self.find_latest_experiment_data(method, application)
-            if not experiment_dir:
-                print(f"❌ 未找到 {method} {application} 實驗數據")
-                pod_data = None
-                rps_data = None
-            else:
-                # 提取實際數據
-                pod_data = self.extract_pod_data_from_logs(experiment_dir, method, scenario)
-                rps_data = self.extract_rps_data(experiment_dir, scenario, application)
-                
-                if pod_data is None:
-                    print(f"❌ 未能提取 {method} {application} {scenario} pod數據")
-                if rps_data is None:
-                    print(f"❌ 未能提取 {method} {application} {scenario} RPS數據")
-            
-            scenario_data['methods'][method] = {
-                'pod_data': pod_data,
-                'rps_data': rps_data,
-                'has_data': pod_data is not None or rps_data is not None
-            }
-        
-        # 收集K8s-HPA各配置數據
+    def choose_best_k8s_hpa_config(self, application: str, scenario: str) -> str:
+        """選擇最佳請求效率的K8s-HPA配置作為代表"""
         method_dir_name = self.app_method_mapping[application]["K8s-HPA"]
         method_dir = self.logs_root / method_dir_name
         
-        for config in self.k8s_hpa_configs:
-            method_name = f"K8s-HPA-{config}"
-            print(f"📊 收集 {method_name} - {application} - {scenario} 數據...")
+        config_stats = {}
+        
+        # 根據應用獲取對應的K8s-HPA配置
+        k8s_hpa_configs = self.get_k8s_hpa_configs(application)
+        
+        for config in k8s_hpa_configs:
+            print(f"🔍 檢查 K8s-HPA-{config} - {application} - {scenario} 延遲數據...")
             
             # 查找特定配置的實驗目錄
             config_dirs = []
@@ -686,29 +750,129 @@ class ScenarioComparisonGenerator:
                         config_dirs.append(cpu_config_dir)
             
             if not config_dirs:
-                print(f"❌ 未找到 {method_name} {application} 實驗數據")
+                print(f"❌ 未找到 K8s-HPA-{config} {application} 實驗數據")
+                continue
+                
+            # 選擇最新的配置目錄
+            latest_config_dir = max(config_dirs, key=lambda x: x.name)
+            
+            # 提取延遲統計數據
+            stats = self._calculate_method_statistics_from_stats_csv(latest_config_dir, scenario, application)
+            
+            if stats['total_requests'] > 0:
+                config_stats[config] = {
+                    'p95': stats['p95_response_time'],
+                    'p99': stats['p99_response_time'],
+                    'request_efficiency': stats['request_efficiency'],
+                    'experiment_dir': latest_config_dir
+                }
+                print(f"✅ K8s-HPA-{config}: P95={stats['p95_response_time']:.1f}ms, P99={stats['p99_response_time']:.1f}ms, 請求效率={stats['request_efficiency']:.2f}")
+            else:
+                print(f"❌ K8s-HPA-{config}: 無有效數據")
+        
+        if not config_stats:
+            # 根據應用類型返回預設配置
+            default_config = "mem-20" if application == "redis" else "cpu-20"
+            print(f"❌ 無任何K8s-HPA配置有有效數據，使用預設 {default_config}")
+            return default_config
+        
+        # 選擇請求效率最佳的配置
+        best_config = max(config_stats.keys(), 
+                         key=lambda c: config_stats[c]['request_efficiency'])
+        
+        print(f"🎯 選擇最佳請求效率的K8s-HPA配置: {best_config} (請求效率={config_stats[best_config]['request_efficiency']:.2f}, P95={config_stats[best_config]['p95']:.1f}ms, P99={config_stats[best_config]['p99']:.1f}ms)")
+        return best_config
+
+    def collect_scenario_data(self, application: str, scenario: str) -> Dict:
+        """收集指定應用和場景的所有方法數據，僅包含最佳K8s-HPA配置"""
+        scenario_data = {
+            'application': application,
+            'scenario': scenario,
+            'methods': {}
+        }
+        
+        # 根據應用類型確定可用方法
+        if application == "redis":
+            available_methods = ["GNNRL-TGN", "Gym-HPA"]  # Redis只有TGN
+        else:
+            available_methods = self.methods  # OnlineBoutique有GAT、GCN和TGN
+        
+        # 收集GNNRL和Gym-HPA數據
+        for method in available_methods:
+            print(f"📊 收集 {method} - {application} - {scenario} 數據...")
+            
+            experiment_dir = self.find_latest_experiment_data(method, application)
+            if not experiment_dir:
+                print(f"❌ 未找到 {method} {application} 實驗數據")
                 pod_data = None
                 rps_data = None
             else:
-                # 選擇最新的配置目錄
-                latest_config_dir = max(config_dirs, key=lambda x: x.name)
-                
-                # 提取數據
-                pod_data = self.extract_pod_data_from_logs(latest_config_dir, "K8s-HPA", scenario)
-                rps_data = self.extract_rps_data(latest_config_dir, scenario, application)
-                
-                print(f"✅ 找到 {method_name} {application} 配置目錄: {latest_config_dir.name}")
+                # 提取實際數據
+                print(f"📂 使用實驗目錄: {experiment_dir.name}")
+                pod_data = self.extract_pod_data_from_logs(experiment_dir, method, scenario)
+                rps_data = self.extract_rps_data(experiment_dir, scenario, application)
                 
                 if pod_data is None:
-                    print(f"❌ 未能提取 {method_name} {application} {scenario} pod數據")
+                    print(f"❌ 未能提取 {method} {application} {scenario} pod數據")
                 if rps_data is None:
-                    print(f"❌ 未能提取 {method_name} {application} {scenario} RPS數據")
+                    print(f"❌ 未能提取 {method} {application} {scenario} RPS數據")
             
-            scenario_data['methods'][method_name] = {
+            scenario_data['methods'][method] = {
                 'pod_data': pod_data,
                 'rps_data': rps_data,
-                'has_data': pod_data is not None or rps_data is not None
+                'has_data': pod_data is not None or rps_data is not None,
+                'experiment_dir': experiment_dir
             }
+        
+        # 選擇最佳K8s-HPA配置
+        best_config = self.choose_best_k8s_hpa_config(application, scenario)
+        method_name = "K8s-HPA"
+        print(f"📊 收集 {method_name} ({best_config}) - {application} - {scenario} 數據...")
+        
+        method_dir_name = self.app_method_mapping[application]["K8s-HPA"]
+        method_dir = self.logs_root / method_dir_name
+        
+        # 查找選中配置的實驗目錄
+        config_dirs = []
+        if application == "redis":
+            pattern = f"redis_hpa_{best_config}_*"
+            for test_dir in method_dir.glob(pattern):
+                if self.detect_experiment_application(test_dir) == application:
+                    config_dirs.append(test_dir)
+        else:
+            # OnlineBoutique K8s-HPA: k8s_hpa_cpu_seed42_*/cpu-XX/
+            for test_dir in method_dir.glob("k8s_hpa_cpu_seed42_*"):
+                cpu_config_dir = test_dir / best_config  # config is like "cpu-40"
+                if cpu_config_dir.exists() and self.detect_experiment_application(test_dir) == application:
+                    config_dirs.append(cpu_config_dir)
+        
+        if not config_dirs:
+            print(f"❌ 未找到 {method_name} ({best_config}) {application} 實驗數據")
+            pod_data = None
+            rps_data = None
+            latest_config_dir = None
+        else:
+            # 選擇最新的配置目錄
+            latest_config_dir = max(config_dirs, key=lambda x: x.name)
+            
+            # 提取數據
+            pod_data = self.extract_pod_data_from_logs(latest_config_dir, "K8s-HPA", scenario)
+            rps_data = self.extract_rps_data(latest_config_dir, scenario, application)
+            
+            print(f"✅ 找到 {method_name} ({best_config}) {application} 配置目錄: {latest_config_dir.name}")
+            
+            if pod_data is None:
+                print(f"❌ 未能提取 {method_name} ({best_config}) {application} {scenario} pod數據")
+            if rps_data is None:
+                print(f"❌ 未能提取 {method_name} ({best_config}) {application} {scenario} RPS數據")
+        
+        scenario_data['methods'][method_name] = {
+            'pod_data': pod_data,
+            'rps_data': rps_data,
+            'has_data': pod_data is not None or rps_data is not None,
+            'experiment_dir': latest_config_dir,
+            'config': best_config
+        }
             
         return scenario_data
 
@@ -729,11 +893,36 @@ class ScenarioComparisonGenerator:
             if not method_data['has_data']:
                 continue
                 
-            pod_data = method_data['pod_data']
-            rps_data = method_data['rps_data']
+            experiment_dir = method_data.get('experiment_dir')
+            if not experiment_dir:
+                print(f"❌ {method_name} 缺少experiment_dir")
+                continue
+                
+            # 直接從stats.csv提取統計數據
+            stats = self._calculate_method_statistics_from_stats_csv(experiment_dir, scenario, application)
+            stats['method'] = method_name
             
-            # 計算基本統計指標
-            stats = self._calculate_method_statistics(method_name, pod_data, rps_data)
+            # 計算Pod時間面積
+            pod_data = method_data.get('pod_data')
+            if pod_data is not None:
+                pod_time_area = self._calculate_pod_time_area(pod_data)
+                stats['pod_time_area'] = pod_time_area
+                print(f"📊 {method_name} Pod時間面積: {pod_time_area:.1f} Pod-秒")
+            else:
+                stats['pod_time_area'] = 0.0
+                print(f"⚠️ {method_name} 無Pod數據，Pod時間面積設為0")
+            
+            # 為K8s-HPA保存配置信息
+            if method_name == "K8s-HPA" and 'config' in method_data:
+                stats['config'] = method_data['config']
+            
+            # 計算理論值和達成率
+            theoretical_requests = self._calculate_theoretical_requests(application, scenario)
+            stats['theoretical_requests'] = theoretical_requests
+            if theoretical_requests > 0:
+                stats['achievement_rate'] = float(stats['total_requests'] / theoretical_requests * 100)
+            else:
+                stats['achievement_rate'] = 0.0
             
             # 如果是微服務架構，嘗試獲取微服務級別的統計數據
             if application == "onlineboutique":
@@ -744,69 +933,205 @@ class ScenarioComparisonGenerator:
         
         return detailed_stats
     
-    def _calculate_method_statistics(self, method_name: str, pod_data: pd.DataFrame, rps_data: pd.DataFrame) -> Dict:
-        """計算單個方法的統計數據"""
+    def _calculate_method_statistics_from_stats_csv(self, experiment_dir: Path, scenario: str, application: str) -> Dict:
+        """直接從stats.csv提取統計數據，包含Pod時間面積和請求效率"""
         stats = {
-            'method': method_name,
-            'pod_time_area': 0,
             'total_requests': 0,
-            'req_per_pod_time_area': 0,
             'avg_rps': 0,
             'avg_response_time': 0,
             'p95_response_time': 0,
-            'p99_response_time': 0
+            'p99_response_time': 0,
+            'pod_time_area': 0,
+            'request_efficiency': 0
         }
         
-        # 1. 計算pod跟時間的面積 (Pod-Minutes)
-        if pod_data is not None and not pod_data.empty:
-            # 使用梯形法則計算面積 - Pod數量對時間的積分
-            time_minutes = pod_data['time_minutes'].values
-            pod_counts = pod_data['pods'].values
+        # 查找stats.csv文件
+        stats_file = self._find_stats_file(experiment_dir, scenario, application)
+        if not stats_file:
+            print(f"❌ 未找到stats.csv文件")
+            return stats
             
-            # 確保時間是從0開始的連續序列
-            if len(time_minutes) > 1:
-                # 使用梯形積分計算Pod時間面積：Pod數量對時間的積分
-                try:
-                    stats['pod_time_area'] = float(integrate.trapezoid(pod_counts, time_minutes))
-                except AttributeError:
-                    # 兼容舊版本的scipy
-                    stats['pod_time_area'] = float(integrate.trapz(pod_counts, time_minutes))
-            else:
-                # 只有一個數據點時，假設是整個測試期間的平均Pod數量
-                test_duration_minutes = 15  # 15分鐘測試
-                stats['pod_time_area'] = float(pod_counts[0] * test_duration_minutes)
+        try:
+            df = pd.read_csv(stats_file)
+            
+            # 查找Aggregated行（總計數據）
+            aggregated_row = df[df['Name'] == 'Aggregated']
+            if aggregated_row.empty:
+                print(f"❌ stats.csv中未找到Aggregated行")
+                return stats
+            
+            row = aggregated_row.iloc[0]
+            
+            # 直接提取所需數據
+            stats['total_requests'] = float(row.get('Request Count', 0))
+            stats['avg_rps'] = float(row.get('Requests/s', 0))
+            stats['avg_response_time'] = float(row.get('Average Response Time', 0))
+            stats['p95_response_time'] = float(row.get('95%', 0))
+            stats['p99_response_time'] = float(row.get('99%', 0))
+            
+            # 嘗試計算Pod時間面積和請求效率
+            try:
+                pod_data = self._extract_pod_data(experiment_dir, scenario)
+                if pod_data is not None and not pod_data.empty:
+                    stats['pod_time_area'] = self._calculate_pod_time_area(pod_data)
+                    if stats['pod_time_area'] > 0:
+                        stats['request_efficiency'] = stats['total_requests'] / stats['pod_time_area']
+            except:
+                # 如果Pod數據不可用，跳過請求效率計算
+                pass
+            
+            print(f"📊 直接從stats.csv提取: 總請求數={stats['total_requests']:.0f}, RPS={stats['avg_rps']:.1f}, 平均延遲={stats['avg_response_time']:.1f}ms, 請求效率={stats['request_efficiency']:.2f}")
+            
+        except Exception as e:
+            print(f"❌ 讀取stats.csv失敗: {e}")
+            
+        return stats
+    
+    def _calculate_pod_time_area(self, pod_data: pd.DataFrame) -> float:
+        """使用精確的梯形積分計算Pod時間面積（Pod*秒）"""
+        if pod_data is None or pod_data.empty:
+            return 0.0
         
-        # 2. 計算總Request數和平均RPS
-        if rps_data is not None and not rps_data.empty:
-            time_minutes = rps_data['time_minutes'].values
-            rps_values = rps_data['rps'].values
-            
-            # 總請求數 = 使用積分概念計算每個時間切片的總請求數
-            if len(time_minutes) > 1:
-                # 使用梯形積分計算總請求數：RPS對時間的積分
-                try:
-                    # 時間單位是分鐘，需要轉換為秒來計算總請求數
-                    time_seconds = time_minutes * 60
-                    total_requests = integrate.trapezoid(rps_values, time_seconds)
-                    stats['total_requests'] = float(total_requests)
-                except AttributeError:
-                    # 兼容舊版本的scipy
-                    time_seconds = time_minutes * 60
-                    total_requests = integrate.trapz(rps_values, time_seconds)
-                    stats['total_requests'] = float(total_requests)
-            else:
-                # 只有一個數據點時，假設是整個測試期間的平均RPS
-                test_duration_seconds = 15 * 60  # 15分鐘 = 900秒
-                stats['total_requests'] = float(rps_values[0] * test_duration_seconds) if len(rps_values) > 0 else 0.0
-            
-            # 平均RPS
-            stats['avg_rps'] = float(np.mean(rps_values[rps_values > 0]))  # 排除0值
+        # 檢查數據格式，優先使用elapsed_minutes欄位
+        if 'elapsed_minutes' in pod_data.columns:
+            time_column = 'elapsed_minutes'
+            pod_column = 'pod_count'
+        else:
+            time_column = 'time_minutes'
+            pod_column = 'pods'
         
-        # 3. 計算總REQ/pod與時間面積比率
-        if stats['pod_time_area'] > 0:
-            stats['req_per_pod_time_area'] = float(stats['total_requests'] / stats['pod_time_area'])
+        # 確保數據按時間排序
+        pod_data = pod_data.sort_values(time_column)
+        
+        total_area = 0.0
+        for i in range(len(pod_data) - 1):
+            # 梯形積分：(y1 + y2) * (x2 - x1) / 2
+            y1 = pod_data.iloc[i][pod_column]
+            y2 = pod_data.iloc[i + 1][pod_column]
+            
+            # 使用精確的時間差（分鐘）
+            time_diff_minutes = pod_data.iloc[i + 1][time_column] - pod_data.iloc[i][time_column]
+            time_diff_seconds = time_diff_minutes * 60  # 轉換為秒
+            
+            # 梯形面積計算
+            area = (y1 + y2) * time_diff_seconds / 2
+            total_area += area
+            
+            # 調試輸出（僅前幾個點）
+            if i < 3:
+                print(f"  🔍 時間段 {i}: {pod_data.iloc[i][time_column]:.2f}-{pod_data.iloc[i+1][time_column]:.2f}分鐘, Pod: {y1}→{y2}, 時間差: {time_diff_seconds:.1f}秒, 面積: {area:.1f} Pod-秒")
+        
+        print(f"  📊 總計算點數: {len(pod_data)}, 總Pod時間面積: {total_area:.1f} Pod-秒")
+        return total_area
+    
+    def _find_stats_file(self, experiment_dir: Path, scenario: str, application: str) -> Optional[Path]:
+        """查找對應場景的stats.csv文件"""
+        
+        # 根據應用類型調整場景目錄查找模式
+        if application == "redis":
+            scenario_patterns = [
+                f"{scenario}_*",
+                f"redis_{scenario}*", 
+                f"redis_{scenario}",
+                f"{scenario}"
+            ]
+        else:
+            scenario_patterns = [f"{scenario}_*"]
+        
+        scenario_dir = None
+        for pattern in scenario_patterns:
+            scenario_dirs = list(experiment_dir.glob(pattern))
+            if scenario_dirs:
+                scenario_dir = scenario_dirs[0]
+                break
+        
+        # 對於K8s-HPA Redis，直接檢查scenario目錄（無後綴）
+        if not scenario_dir:
+            scenario_dir = experiment_dir / scenario
+            if not scenario_dir.exists():
+                return None
+        
+        # 查找stats文件
+        stats_files = [
+            scenario_dir / f"{scenario}_stats.csv",
+            scenario_dir / f"redis_{scenario}_stats.csv", 
+            scenario_dir / "stats.csv"
+        ]
+        
+        for stats_file in stats_files:
+            if stats_file.exists():
+                print(f"📂 找到stats文件: {stats_file}")
+                return stats_file
+                
+        return None
+    
+    def _extract_total_requests_from_stats(self, method_name: str, pod_data: pd.DataFrame, rps_data: pd.DataFrame) -> float:
+        """從stats.csv文件中直接提取總請求數"""
+        # 由於我們已經在 _enhance_statistics_with_response_times 中處理了stats.csv數據
+        # 這裡先返回0，讓程式使用積分計算，然後在response_time處理中會更新
+        return 0.0
+    
+    def _calculate_method_statistics_with_context(self, method_name: str, pod_data: pd.DataFrame, rps_data: pd.DataFrame, application: str, scenario: str) -> Dict:
+        """計算單個方法的統計數據（包含理論值和達成率）"""
+        # 先計算基礎統計數據
+        stats = self._calculate_method_statistics(method_name, pod_data, rps_data)
+        
+        # 計算理論請求總數和達成率
+        theoretical_requests = self._calculate_theoretical_requests(application, scenario)
+        stats['theoretical_requests'] = theoretical_requests
+        
+        # 計算達成率
+        if theoretical_requests > 0:
+            stats['achievement_rate'] = float(stats['total_requests'] / theoretical_requests * 100)
+        else:
+            stats['achievement_rate'] = 0.0
         
         return stats
+    
+    def _calculate_theoretical_requests(self, application: str, scenario: str) -> float:
+        """計算場景的理論請求總數（基於Locust腳本配置）"""
+        test_duration_seconds = 15 * 60  # 15分鐘 = 900秒
+        
+        # OnlineBoutique場景的理論RPS配置
+        if application == "onlineboutique":
+            if scenario == "offpeak":
+                # 固定100 RPS
+                return 100.0 * test_duration_seconds
+            elif scenario == "peak":
+                # 固定400 RPS
+                return 400.0 * test_duration_seconds
+            elif scenario == "rushsale":
+                # RushSale: 基礎100 RPS + 搶購期間800 RPS
+                # 搶購時間: 180-480秒 (300秒搶購期)
+                base_time = test_duration_seconds - 300  # 非搶購時間
+                rush_time = 300  # 搶購時間
+                return (100.0 * base_time) + (800.0 * rush_time)
+            elif scenario == "fluctuating":
+                # Fluctuating: 四階段 [50, 300, 50, 800] RPS，實際平均約200 RPS
+                # 基於實際測試數據：205 RPS × 900秒 ≈ 184,500請求
+                return 200.0 * test_duration_seconds
+        
+        # Redis場景的理論RPS配置  
+        elif application == "redis":
+            if scenario == "offpeak":
+                # 固定250 RPS (基於實際測試數據)
+                return 250.0 * test_duration_seconds
+            elif scenario == "peak":
+                # 固定2000-3000 RPS (使用2000作為基準)
+                return 2000.0 * test_duration_seconds
+            elif scenario == "rushsale":
+                # Redis RushSale 配置需要進一步確認，暫用類似OB的邏輯
+                base_time = test_duration_seconds - 300
+                rush_time = 300
+                return (500.0 * base_time) + (6000.0 * rush_time)
+            elif scenario == "fluctuating":
+                # Redis Fluctuating 四階段，使用更高的RPS
+                phase_duration = test_duration_seconds / 4
+                phase_rps = [500, 2000, 500, 4000]  # Redis高性能配置
+                return sum(rps * phase_duration for rps in phase_rps)
+        
+        # 未知場景返回0
+        return 0.0
     
     def _calculate_microservice_statistics(self, method_name: str, method_data: Dict) -> List[Dict]:
         """計算微服務級別的統計數據"""
@@ -986,8 +1311,7 @@ class ScenarioComparisonGenerator:
                 # 計算詳細統計
                 detailed_stats = self.calculate_detailed_statistics(scenario_data)
                 
-                # 增強統計數據 - 添加響應時間信息
-                self._enhance_statistics_with_response_times(detailed_stats, app, scenario)
+                # 響應時間信息已直接從stats.csv提取，無需額外處理
                 
                 app_statistics['scenarios'][scenario] = detailed_stats
             
@@ -1070,13 +1394,8 @@ class ScenarioComparisonGenerator:
                         method_stats['p95_response_time'] = weighted_p95_rt
                         method_stats['p99_response_time'] = weighted_p99_rt
                         
-                        # 更新總請求數（如果stats文件有更准確的數據）
-                        if total_requests > method_stats['total_requests']:
-                            method_stats['total_requests'] = total_requests
-                            
-                            # 重新計算 req_per_pod_time_area
-                            if method_stats['pod_time_area'] > 0:
-                                method_stats['req_per_pod_time_area'] = total_requests / method_stats['pod_time_area']
+                        # 這個函數已不再需要，因為我們直接從stats.csv提取數據
+                        pass
     
     def _generate_statistics_table(self, all_statistics: Dict):
         """生成表格格式的統計報告"""
@@ -1089,14 +1408,30 @@ class ScenarioComparisonGenerator:
             for scenario_name, scenario_data in app_data['scenarios'].items():
                 # 生成方法級別的統計
                 for method_name, method_stats in scenario_data['summary_statistics'].items():
+                    # 為不同方法設置顯示名稱
+                    display_method_name = method_name
+                    if method_name == "K8s-HPA" and 'config' in method_stats:
+                        display_method_name = f"{method_name} ({method_stats['config']})"
+                    elif method_name == "GNNRL-GAT":
+                        display_method_name = "GraphPilot-GAT"
+                    elif method_name == "GNNRL-GCN":
+                        display_method_name = "GraphPilot-GCN"
+                    elif method_name == "GNNRL-TGN":
+                        display_method_name = "GraphPilot"
+                    
+                    # 計算請求效率 (總請求數/Pod時間面積)
+                    pod_time_area = method_stats.get('pod_time_area', 0)
+                    request_efficiency = method_stats['total_requests'] / pod_time_area if pod_time_area > 0 else 0
+                    
                     row = {
                         '應用': app_name,
                         '場景': scenario_name,
-                        '微服務': '總計',
-                        '方法': method_name,
-                        'Pod時間面積': f"{method_stats['pod_time_area']:.2f}",
+                        '方法': display_method_name,
+                        'Pod時間面積(Pod-秒)': f"{pod_time_area:.1f}",
                         '總請求數': f"{method_stats['total_requests']:.0f}",
-                        '請求/Pod時間面積': f"{method_stats['req_per_pod_time_area']:.2f}",
+                        '請求效率(請求/Pod-秒)': f"{request_efficiency:.2f}",
+                        '理論請求數': f"{method_stats['theoretical_requests']:.0f}",
+                        '達成率(%)': f"{method_stats['achievement_rate']:.1f}%",
                         '平均RPS': f"{method_stats['avg_rps']:.2f}",
                         '平均響應時間(ms)': f"{method_stats['avg_response_time']:.2f}",
                         '95%響應時間(ms)': f"{method_stats['p95_response_time']:.2f}",
@@ -1172,15 +1507,16 @@ class ScenarioComparisonGenerator:
         
         plt.figure(figsize=(15, 8))
         
-        # 設置顏色 - 6種方法的顏色
-        colors = ['#1f77b4', '#ff7f0e', '#e74c3c', '#f39c12', '#2ecc71', '#3498db']
+        # 設置顏色 - 多種方法的顏色
+        # GNNRL-GAT(藍), GNNRL-GCN(紫), GNNRL-TGN(橙), Gym-HPA(紅), K8s-HPA(綠)
+        colors = ['#1f77b4', '#9b59b6', '#ff7f0e', '#e74c3c', '#2ecc71', '#3498db']
         method_colors = dict(zip(self.all_methods, colors))
         
         # 檢查是否有任何數據
         has_any_data = False
         missing_data_methods = []
         
-        ylabel = 'Pod 數量' if metric == 'pods' else 'RPS (每秒請求數)'
+        ylabel = 'Pod Count' if metric == 'pods' else 'RPS'
         
         for method in self.all_methods:
             if method in scenario_data['methods']:
@@ -1193,12 +1529,29 @@ class ScenarioComparisonGenerator:
                     df = method_data['rps_data']
                 
                 if df is not None:
+                    # 檢查DataFrame是否有必要的欄位
+                    required_col = 'pods' if metric == 'pods' else 'rps'
+                    if 'time_minutes' not in df.columns or required_col not in df.columns:
+                        print(f"⚠️ {method} 數據缺少必要欄位: {df.columns.tolist()}")
+                        missing_data_methods.append(method)
+                        continue
+                    
                     # 有數據，繪製線條
                     x_data = df['time_minutes']
                     y_data = df['pods'] if metric == 'pods' else df['rps']
                     
+                    # 設定圖表標籤（不顯示配置信息）
+                    if method == "GNNRL-GAT":
+                        label = "GraphPilot-GAT"
+                    elif method == "GNNRL-GCN":
+                        label = "GraphPilot-GCN"
+                    elif method == "GNNRL-TGN":
+                        label = "GraphPilot"
+                    else:
+                        label = method
+                    
                     plt.plot(x_data, y_data, 
-                            label=method, 
+                            label=label, 
                             color=method_colors[method],
                             linewidth=2,
                             marker='o',
@@ -1209,10 +1562,9 @@ class ScenarioComparisonGenerator:
                     missing_data_methods.append(method)
         
         # 設置圖表基本屬性
-        plt.xlabel('時間 (分鐘)', fontsize=12)
+        plt.xlabel('Time(min)', fontsize=12)
         plt.ylabel(ylabel, fontsize=12)
-        plt.title(f'{application.title()} - {scenario.title()} 場景 - {ylabel}對比 (含K8s-HPA各配置)', 
-                 fontsize=14, fontweight='bold')
+        #plt.title(f'{application.title()} - {scenario.title()} 場景 - {ylabel}對比', fontsize=14, fontweight='bold')
         plt.grid(True, alpha=0.3)
         plt.xlim(0, 15)
         
@@ -1271,7 +1623,7 @@ class ScenarioComparisonGenerator:
                 
             # 檢查所有實驗目錄，不只是最新的
             if application == "redis":
-                if method == "GNNRL":
+                if method in ["GNNRL-GAT", "GNNRL-GCN", "GNNRL-TGN"]:
                     # 檢查所有 GNNRL Redis 實驗目錄
                     for test_dir in method_dir.glob("gnnrl_*redis*"):
                         self._extract_scenarios_from_dir(test_dir, available_scenarios)
@@ -1283,9 +1635,10 @@ class ScenarioComparisonGenerator:
                     for test_dir in method_dir.glob("gym_hpa_redis_*seed42_*"):
                         self._extract_scenarios_from_dir(test_dir, available_scenarios)
             else:  # onlineboutique
-                if method == "GNNRL":
+                if method in ["GNNRL-GAT", "GNNRL-GCN", "GNNRL-TGN"]:
                     for test_dir in method_dir.glob("gnnrl_*seed42_*"):
-                        if self.detect_experiment_application(test_dir) == "onlineboutique":
+                        detected_app = self.detect_experiment_application(test_dir)
+                        if detected_app == "onlineboutique":
                             self._extract_scenarios_from_dir(test_dir, available_scenarios)
                 elif method == "Gym-HPA":
                     for test_dir in method_dir.glob("gym_hpa_*seed42_*"):
@@ -1370,6 +1723,73 @@ class ScenarioComparisonGenerator:
         
         print(f"📋 總結報告已保存: {summary_file}")
 
+    def generate_legend(self):
+        """生成單獨的圖例文件"""
+        print("🎨 生成圖例文件...")
+        
+        # 設置顏色 - 與圖表中相同的顏色
+        colors = ['#1f77b4', '#9b59b6', '#ff7f0e', '#e74c3c', '#2ecc71', '#3498db']
+        method_colors = dict(zip(self.all_methods, colors))
+        
+        # 方法標籤映射（與圖表中相同）
+        method_labels = {
+            "GNNRL-GAT": "GraphPilot-GAT",
+            "GNNRL-GCN": "GraphPilot-GCN", 
+            "GNNRL-TGN": "GraphPilot",
+            "Gym-HPA": "Gym-HPA",
+            "K8s-HPA": "K8s-HPA"
+        }
+        
+        # 分組：GraphPilot 方法（左側）和其他方法（右側）
+        graphpilot_methods = ["GNNRL-GAT", "GNNRL-GCN", "GNNRL-TGN"]
+        other_methods = ["Gym-HPA", "K8s-HPA"]
+        
+        # 創建圖表
+        fig, ax = plt.subplots(figsize=(12, 4))
+        ax.set_xlim(0, 10)
+        ax.set_ylim(0, 3)
+        ax.axis('off')  # 隱藏座標軸
+        
+        # 左側：GraphPilot 方法
+        x_start_left = 1
+        y_positions = [2.5, 2, 1.5]
+        
+        for i, method in enumerate(graphpilot_methods):
+            color = method_colors[method]
+            label = method_labels[method]
+            
+            # 繪製線條和標記
+            ax.plot([x_start_left, x_start_left + 1], [y_positions[i], y_positions[i]], 
+                   color=color, linewidth=3, marker='o', markersize=8)
+            
+            # 添加標籤
+            ax.text(x_start_left + 1.2, y_positions[i], label, 
+                   fontsize=14, va='center', weight='bold')
+        
+        # 右側：其他方法
+        x_start_right = 6.5
+        y_positions_right = [2.25, 1.75]
+        
+        for i, method in enumerate(other_methods):
+            color = method_colors[method]
+            label = method_labels[method]
+            
+            # 繪製線條和標記
+            ax.plot([x_start_right, x_start_right + 1], [y_positions_right[i], y_positions_right[i]], 
+                   color=color, linewidth=3, marker='o', markersize=8)
+            
+            # 添加標籤
+            ax.text(x_start_right + 1.2, y_positions_right[i], label, 
+                   fontsize=14, va='center', weight='bold')
+        
+        # 保存圖例
+        legend_path = self.output_dir / "legend.png"
+        plt.savefig(legend_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"✅ 已保存圖例: legend.png")
+        return legend_path
+
 def main():
     """主函數"""
     import sys
@@ -1415,6 +1835,10 @@ def main():
     
     # 生成所有對比圖
     generated_files = generator.generate_all_comparisons()
+    
+    # 生成圖例
+    legend_file = generator.generate_legend()
+    generated_files.append(legend_file)
     
     print("\n" + "=" * 50)
     print("💡 使用說明:")

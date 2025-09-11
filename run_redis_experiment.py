@@ -23,7 +23,8 @@ class RedisExperimentRunner(ExperimentRunner):
     
     def __init__(self, use_standardized_scenarios: bool = False, 
                  algorithm: str = 'ppo', stable_loadtest: bool = False, 
-                 max_rps: int = None, loadtest_timeout: int = 30):
+                 max_rps: int = None, loadtest_timeout: int = 30,
+                 hpa_type: str = 'all'):
         super().__init__(
             use_standardized_scenarios=use_standardized_scenarios,
             algorithm=algorithm,
@@ -32,17 +33,39 @@ class RedisExperimentRunner(ExperimentRunner):
             loadtest_timeout=loadtest_timeout
         )
         
-        # Redis 專用配置
+        # Redis 專用配置 - 必須覆蓋父類的預設值
         self.config.update({
             'use_case': 'redis',
             'namespace': 'redis'
         })
         
+        # 強制設置 UnifiedExperimentManager 環境變數，確保一致性
+        import os
+        os.environ['NAMESPACE_REDIS'] = 'redis'
+        
+        # 確保 namespace 屬性也正確設置（如果存在）
+        if hasattr(self, 'namespace'):
+            self.namespace = 'redis'
+        
         # 設置 Redis HPA 配置
-        # 簡化為只測試 CPU 配置
-        self.redis_hpa_configs = {
-            'cpu': ['cpu-20', 'cpu-40', 'cpu-60', 'cpu-80']
+        # 包含 CPU、Memory 和 混合配置
+        all_configs = {
+            'cpu': ['cpu-20', 'cpu-40', 'cpu-60', 'cpu-80'],
+            'memory': ['mem-20', 'mem-40', 'mem-60', 'mem-80'],
+            'hybrid': ['cpu-20-mem-40', 'cpu-40-mem-40', 'cpu-60-mem-40', 'cpu-80-mem-40',
+                      'cpu-20-mem-80', 'cpu-40-mem-80', 'cpu-60-mem-80', 'cpu-80-mem-80']
         }
+        
+        # 根據 hpa_type 參數過濾配置
+        if hpa_type == 'all':
+            self.redis_hpa_configs = all_configs
+        elif hpa_type in all_configs:
+            self.redis_hpa_configs = {hpa_type: all_configs[hpa_type]}
+        else:
+            self.redis_hpa_configs = all_configs  # 預設為全部
+            
+        self.log_info(f"🔧 Redis HPA 配置類型: {hpa_type}")
+        self.log_info(f"📋 將測試的配置: {list(self.redis_hpa_configs.keys())}")
         
     def check_redis_environment(self) -> bool:
         """檢查 Redis 環境"""
@@ -289,8 +312,11 @@ class RedisExperimentRunner(ExperimentRunner):
         # 使用統一實驗管理器執行分散式Locust測試
         from unified_experiment_manager import UnifiedExperimentManager
         
-        # 初始化統一實驗管理器
+        # 初始化統一實驗管理器 - 確保使用 Redis 環境配置
         manager = UnifiedExperimentManager()
+        # 強制設置為 Redis 環境
+        manager.namespace = manager.redis_namespace
+        manager.target_host = "redis-master.redis.svc.cluster.local"
         
         for scenario in scenarios:
             self.log_info(f"📊 執行 Redis 負載測試: {scenario}")
@@ -391,9 +417,8 @@ class RedisExperimentRunner(ExperimentRunner):
             target_rps=self.max_rps,
             loadtest_timeout=self.loadtest_timeout
         )
-        
-        # 設置 Redis 相關配置
-        manager.namespace = "redis"
+        # 強制設置為 Redis 環境配置
+        manager.namespace = manager.redis_namespace
         manager.target_host = "redis-master.redis.svc.cluster.local"
         
         scenario_counter = 1

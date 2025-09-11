@@ -1,0 +1,132 @@
+{
+  "timestamp": 1753051401,
+  "duration": 600,
+  "graphType": "workload",
+  "elements": {
+    "nodes": [
+      {
+        "data": {
+          "id": "3329e0154840ac1580bc4e26eeef1e775e961814c4f9cba80a28e9f77ae62305",
+          "nodeType": "workload",
+          "cluster": "Kubernetes",
+          "namespace": "redis",
+          "workload": "redis-master",
+          "app": "redis-master",
+          "version": "latest",
+          "destServices": [
+            {
+              "cluster": "Kubernetes",
+              "namespace": "redis",
+              "name": "redis-master"
+            }
+          ],
+          "traffic": [
+            {
+              "protocol": "tcp",
+              "rates": {
+                "tcpIn": "66365.52"
+              }
+            }
+          ],
+          "healthData": null
+        }
+      },
+      {
+        "data": {
+          "id": "6773d3040a700f580f7fa3f999e848676864433d8ec48b6be18026931457d73b",
+          "nodeType": "workload",
+          "cluster": "Kubernetes",
+          "namespace": "redis",
+          "workload": "redis-slave",
+          "app": "redis-slave",
+          "version": "latest",
+          "traffic": [
+            {
+              "protocol": "tcp",
+              "rates": {
+                "tcpOut": "43.17"
+              }
+            }
+          ],
+          "healthData": null,
+          "isRoot": true
+        }
+      },
+      {
+        "data": {
+          "id": "65be8a76856b9d3ef07a3348abcf6476fc80408bd342dd7882a5f4274542a1e0",
+          "nodeType": "unknown",
+          "cluster": "unknown",
+          "namespace": "unknown",
+          "workload": "unknown",
+          "app": "unknown",
+          "version": "latest",
+          "traffic": [
+            {
+              "protocol": "tcp",
+              "rates": {
+                "tcpOut": "66322.35"
+              }
+            }
+          ],
+          "healthData": null,
+          "isInaccessible": true,
+          "isRoot": true
+        }
+      }
+    ],
+    "edges": [
+      {
+        "data": {
+          "id": "18413344fd12738fb2bbf11dbb44d5a084e5d15fcc1503e1cdefbee6c1daa27f",
+          "source": "65be8a76856b9d3ef07a3348abcf6476fc80408bd342dd7882a5f4274542a1e0",
+          "target": "3329e0154840ac1580bc4e26eeef1e775e961814c4f9cba80a28e9f77ae62305",
+          "destPrincipal": "unknown",
+          "sourcePrincipal": "unknown",
+          "traffic": {
+            "protocol": "tcp",
+            "rates": {
+              "tcp": "66322.35"
+            },
+            "responses": {
+              "-": {
+                "flags": {
+                  "-": "100.0"
+                },
+                "hosts": {
+                  "redis-master.redis.svc.cluster.local": "100.0"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "data": {
+          "id": "7120b1ac77ef44dababe73d26a483c61083c31a9edb63702fa395e183f8e4065",
+          "source": "6773d3040a700f580f7fa3f999e848676864433d8ec48b6be18026931457d73b",
+          "target": "3329e0154840ac1580bc4e26eeef1e775e961814c4f9cba80a28e9f77ae62305",
+          "destPrincipal": "spiffe://cluster.local/ns/redis/sa/default",
+          "isMTLS": "100",
+          "sourcePrincipal": "spiffe://cluster.local/ns/redis/sa/default",
+          "traffic": {
+            "protocol": "tcp",
+            "rates": {
+              "tcp": "43.17"
+            },
+            "responses": {
+              "-": {
+                "flags": {
+                  "-": "100.0"
+                },
+                "hosts": {
+                  "redis-master.redis.svc.cluster.local": "100.0"
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

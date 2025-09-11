@@ -30,7 +30,7 @@ class ExperimentPlanner:
             'gnnrl': {
                 'name': 'GNNRL (圖神經網路強化學習)', 
                 'pattern': 'gnnrl_{model}_{goal}_k8s_*_steps_{steps}.zip',
-                'search_pattern': 'gnnrl*{steps}*.zip'
+                'search_pattern': 'gnnrl_{model}_*{steps}*.zip'
             },
             'k8s_hpa': {
                 'name': 'K8s-HPA (原生HPA基準測試)',

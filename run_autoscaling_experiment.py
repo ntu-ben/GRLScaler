@@ -98,7 +98,8 @@ def run_redis_experiment(args):
         algorithm=args.algorithm,
         stable_loadtest=args.stable_loadtest,
         max_rps=args.max_rps,
-        loadtest_timeout=args.loadtest_timeout
+        loadtest_timeout=args.loadtest_timeout,
+        hpa_type=args.hpa_type
     )
     success = runner.run_complete_redis_experiment(args.steps, args.goal, args.model)
     
@@ -121,6 +122,12 @@ def main():
 
   # Redis 完整實驗
   python run_autoscaling_experiment.py redis --steps 5000
+
+  # Redis 只測試 Memory-based HPA
+  python run_autoscaling_experiment.py redis --hpa-type memory --steps 5000
+
+  # Redis 只測試 CPU-based HPA
+  python run_autoscaling_experiment.py redis --hpa-type cpu --steps 5000
 
   # 使用標準化場景確保公平比較
   python run_autoscaling_experiment.py onlineboutique --standardized --algorithm a2c --stable-loadtest
@@ -164,6 +171,12 @@ def main():
     parser.add_argument('--skip', nargs='+',
                        choices=['plan', 'gnnrl', 'gym-hpa', 'k8s-hpa', 'analysis'],
                        help='跳過指定階段 (僅 OnlineBoutique)')
+    
+    # Redis 專用選項
+    parser.add_argument('--hpa-type', 
+                       choices=['cpu', 'memory', 'hybrid', 'all'],
+                       default='all',
+                       help='Redis HPA 配置類型 (預設: all, 僅 Redis)')
     
     # 其他選項
     parser.add_argument('--list-configs', action='store_true',

@@ -1,140 +1,94 @@
 {
-  "generation_time": "2025-07-19 11:48:42",
+  "generation_time": "2025-07-30 15:38:51",
   "applications": {
     "redis": {
       "application": "redis",
       "scenarios": {
-        "peak": {
-          "application": "redis",
-          "scenario": "peak",
-          "microservices": [],
-          "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 297.0,
-              "total_requests": 1438242,
-              "req_per_pod_time_area": 4842.565656565656,
-              "avg_rps": 0.6935166710025619,
-              "avg_response_time": 52.05185189195325,
-              "p95_response_time": 222.7511086451376,
-              "p99_response_time": 370.45713447389244
-            },
-            "Gym-HPA": {
-              "method": "Gym-HPA",
-              "pod_time_area": 337.0,
-              "total_requests": 1438533.0388202667,
-              "req_per_pod_time_area": 4268.644032107616,
-              "avg_rps": 0.6948070882273517,
-              "avg_response_time": 60.6929905061686,
-              "p95_response_time": 237.50986257757205,
-              "p99_response_time": 402.1721603797546
-            },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 30.0,
-              "total_requests": 719776,
-              "req_per_pod_time_area": 23992.533333333333,
-              "avg_rps": 398.8340377609471,
-              "avg_response_time": 266.089539184785,
-              "p95_response_time": 420.0,
-              "p99_response_time": 520.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 30.0,
-              "total_requests": 719770,
-              "req_per_pod_time_area": 23992.333333333332,
-              "avg_rps": 398.7735783707847,
-              "avg_response_time": 260.43683065135156,
-              "p95_response_time": 410.0,
-              "p99_response_time": 510.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 30.0,
-              "total_requests": 719830,
-              "req_per_pod_time_area": 23994.333333333332,
-              "avg_rps": 398.8195122288194,
-              "avg_response_time": 269.7733327778439,
-              "p95_response_time": 420.0,
-              "p99_response_time": 520.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 30.0,
-              "total_requests": 719624,
-              "req_per_pod_time_area": 23987.466666666667,
-              "avg_rps": 398.73025556057917,
-              "avg_response_time": 272.6661314108757,
-              "p95_response_time": 420.0,
-              "p99_response_time": 510.0
-            }
-          }
-        },
         "fluctuating": {
           "application": "redis",
           "scenario": "fluctuating",
           "microservices": [],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 300.0,
-              "total_requests": 0.0,
-              "req_per_pod_time_area": 0.0,
-              "avg_rps": NaN,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
+            "GNNRL-TGN": {
+              "total_requests": 1574439.0,
+              "avg_rps": 1750.5307409610891,
+              "avg_response_time": 42.10437686058336,
+              "p95_response_time": 120.0,
+              "p99_response_time": 190.0,
+              "pod_time_area": 3552.0000000000005,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 1575000.0,
+              "achievement_rate": 99.96438095238095
             },
             "Gym-HPA": {
+              "total_requests": 1573120.0,
+              "avg_rps": 1749.0860655412737,
+              "avg_response_time": 45.16440322416599,
+              "p95_response_time": 120.0,
+              "p99_response_time": 170.0,
+              "pod_time_area": 3552.0000000000005,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 300.0,
-              "total_requests": 0.0,
-              "req_per_pod_time_area": 0.0,
-              "avg_rps": NaN,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
+              "theoretical_requests": 1575000.0,
+              "achievement_rate": 99.88063492063492
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 30.0,
-              "total_requests": 540016,
-              "req_per_pod_time_area": 18000.533333333333,
-              "avg_rps": 324.9256722985804,
-              "avg_response_time": 327.98505541485355,
-              "p95_response_time": 570.0,
-              "p99_response_time": 670.0
+            "K8s-HPA": {
+              "total_requests": 1574189.0,
+              "avg_rps": 1750.3936355850103,
+              "avg_response_time": 43.596611969719014,
+              "p95_response_time": 120.0,
+              "p99_response_time": 200.0,
+              "pod_time_area": 3730.2,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "mem-20",
+              "theoretical_requests": 1575000.0,
+              "achievement_rate": 99.94850793650794
+            }
+          }
+        },
+        "peak": {
+          "application": "redis",
+          "scenario": "peak",
+          "microservices": [],
+          "summary_statistics": {
+            "GNNRL-TGN": {
+              "total_requests": 1800000.0,
+              "avg_rps": 2001.5723256192257,
+              "avg_response_time": 60.12825444444445,
+              "p95_response_time": 130.0,
+              "p99_response_time": 160.0,
+              "pod_time_area": 4959.3,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 1800000.0,
+              "achievement_rate": 100.0
             },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 30.0,
-              "total_requests": 538450,
-              "req_per_pod_time_area": 17948.333333333332,
-              "avg_rps": 324.66361569163934,
-              "avg_response_time": 326.57724175786063,
-              "p95_response_time": 580.0,
-              "p99_response_time": 700.0
+            "Gym-HPA": {
+              "total_requests": 1799968.0,
+              "avg_rps": 2001.7495202050288,
+              "avg_response_time": 57.59578725844015,
+              "p95_response_time": 120.0,
+              "p99_response_time": 160.0,
+              "pod_time_area": 6555.9,
+              "request_efficiency": 0,
+              "method": "Gym-HPA",
+              "theoretical_requests": 1800000.0,
+              "achievement_rate": 99.99822222222222
             },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 30.0,
-              "total_requests": 538344,
-              "req_per_pod_time_area": 17944.8,
-              "avg_rps": 293.68534968862406,
-              "avg_response_time": 308.9006662377559,
-              "p95_response_time": 540.0,
-              "p99_response_time": 660.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 30.0,
-              "total_requests": 540000,
-              "req_per_pod_time_area": 18000.0,
-              "avg_rps": 325.06851678858834,
-              "avg_response_time": 328.5151020719737,
-              "p95_response_time": 580.0,
-              "p99_response_time": 670.0
+            "K8s-HPA": {
+              "total_requests": 1802000.0,
+              "avg_rps": 1999.0751716538016,
+              "avg_response_time": 61.14278135405105,
+              "p95_response_time": 130.0,
+              "p99_response_time": 160.0,
+              "pod_time_area": 3534.3,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "mem-20",
+              "theoretical_requests": 1800000.0,
+              "achievement_rate": 100.1111111111111
             }
           }
         },
@@ -143,65 +97,42 @@
           "scenario": "offpeak",
           "microservices": [],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 261.0,
-              "total_requests": 134134,
-              "req_per_pod_time_area": 513.9233716475096,
-              "avg_rps": 0.1524927972984425,
-              "avg_response_time": 2.48890970591767,
-              "p95_response_time": 3.586689429973012,
-              "p99_response_time": 33.013605797187886
+            "GNNRL-TGN": {
+              "total_requests": 224822.0,
+              "avg_rps": 249.9341877209111,
+              "avg_response_time": 1.1721361788437077,
+              "p95_response_time": 2.0,
+              "p99_response_time": 5.0,
+              "pod_time_area": 3554.4000000000005,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 225000.0,
+              "achievement_rate": 99.9208888888889
             },
             "Gym-HPA": {
+              "total_requests": 224634.0,
+              "avg_rps": 249.7026123456836,
+              "avg_response_time": 1.1779739487343857,
+              "p95_response_time": 2.0,
+              "p99_response_time": 5.0,
+              "pod_time_area": 3554.4000000000005,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 262.0,
-              "total_requests": 134420,
-              "req_per_pod_time_area": 513.0534351145038,
-              "avg_rps": 0.15270257299025988,
-              "avg_response_time": 2.525048893737112,
-              "p95_response_time": 3.452826960273769,
-              "p99_response_time": 32.43878887070377
+              "theoretical_requests": 225000.0,
+              "achievement_rate": 99.83733333333333
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 30.0,
-              "total_requests": 179976,
-              "req_per_pod_time_area": 5999.2,
-              "avg_rps": 99.70870173487792,
-              "avg_response_time": 173.71085062953378,
-              "p95_response_time": 290.0,
-              "p99_response_time": 380.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 30.0,
-              "total_requests": 179988,
-              "req_per_pod_time_area": 5999.6,
-              "avg_rps": 99.6502920545538,
-              "avg_response_time": 177.63543107259295,
-              "p95_response_time": 290.0,
-              "p99_response_time": 380.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 30.0,
-              "total_requests": 179798,
-              "req_per_pod_time_area": 5993.266666666666,
-              "avg_rps": 99.61115548568098,
-              "avg_response_time": 173.996766161281,
-              "p95_response_time": 280.0,
-              "p99_response_time": 370.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 30.0,
-              "total_requests": 179968,
-              "req_per_pod_time_area": 5998.933333333333,
-              "avg_rps": 99.5081335196379,
-              "avg_response_time": 174.48796107375716,
-              "p95_response_time": 280.0,
-              "p99_response_time": 380.0
+            "K8s-HPA": {
+              "total_requests": 224305.0,
+              "avg_rps": 249.5733561546484,
+              "avg_response_time": 0.6000133746461291,
+              "p95_response_time": 1.0,
+              "p99_response_time": 4.0,
+              "pod_time_area": 2667.6000000000004,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "mem-20",
+              "theoretical_requests": 225000.0,
+              "achievement_rate": 99.69111111111111
             }
           }
         },
@@ -210,65 +141,42 @@
           "scenario": "rushsale",
           "microservices": [],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 300.0,
-              "total_requests": 0.0,
-              "req_per_pod_time_area": 0.0,
-              "avg_rps": NaN,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
+            "GNNRL-TGN": {
+              "total_requests": 2130249.0,
+              "avg_rps": 2370.666565663689,
+              "avg_response_time": 7.907500954113815,
+              "p95_response_time": 40.0,
+              "p99_response_time": 65.0,
+              "pod_time_area": 4139.1,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 2100000.0,
+              "achievement_rate": 101.44042857142857
             },
             "Gym-HPA": {
+              "total_requests": 2125206.0,
+              "avg_rps": 2364.901797938119,
+              "avg_response_time": 8.191180055015844,
+              "p95_response_time": 38.0,
+              "p99_response_time": 59.0,
+              "pod_time_area": 4151.4,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 300.0,
-              "total_requests": 0.0,
-              "req_per_pod_time_area": 0.0,
-              "avg_rps": NaN,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
+              "theoretical_requests": 2100000.0,
+              "achievement_rate": 101.20028571428573
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 30.0,
-              "total_requests": 605274,
-              "req_per_pod_time_area": 20175.8,
-              "avg_rps": 320.7307479053491,
-              "avg_response_time": 337.8105485440729,
-              "p95_response_time": 590.0,
-              "p99_response_time": 710.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 30.0,
-              "total_requests": 604000,
-              "req_per_pod_time_area": 20133.333333333332,
-              "avg_rps": 335.60603812372403,
-              "avg_response_time": 354.2481142956814,
-              "p95_response_time": 600.0,
-              "p99_response_time": 700.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 30.0,
-              "total_requests": 605272,
-              "req_per_pod_time_area": 20175.733333333334,
-              "avg_rps": 335.9091369383912,
-              "avg_response_time": 349.4745202089972,
-              "p95_response_time": 590.0,
-              "p99_response_time": 700.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 30.0,
-              "total_requests": 603952,
-              "req_per_pod_time_area": 20131.733333333334,
-              "avg_rps": 335.140393043093,
-              "avg_response_time": 354.0483968200564,
-              "p95_response_time": 600.0,
-              "p99_response_time": 710.0
+            "K8s-HPA": {
+              "total_requests": 2125389.0,
+              "avg_rps": 2364.5050022621554,
+              "avg_response_time": 7.697692516522857,
+              "p95_response_time": 38.0,
+              "p99_response_time": 62.0,
+              "pod_time_area": 4159.200000000001,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "mem-20",
+              "theoretical_requests": 2100000.0,
+              "achievement_rate": 101.20899999999999
             }
           }
         }
@@ -277,806 +185,12 @@
     "onlineboutique": {
       "application": "onlineboutique",
       "scenarios": {
-        "offpeak": {
-          "application": "onlineboutique",
-          "scenario": "offpeak",
-          "microservices": [
-            {
-              "method": "GNNRL",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "GNNRL",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "Gym-HPA",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            }
-          ],
-          "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 1088.0,
-              "total_requests": 179938,
-              "req_per_pod_time_area": 165.38419117647058,
-              "avg_rps": 99.58168117868617,
-              "avg_response_time": 154.28011899932827,
-              "p95_response_time": 390.0,
-              "p99_response_time": 690.0
-            },
-            "Gym-HPA": {
-              "method": "Gym-HPA",
-              "pod_time_area": 2275.0,
-              "total_requests": 177446,
-              "req_per_pod_time_area": 77.99824175824176,
-              "avg_rps": 98.00849097089221,
-              "avg_response_time": 221.0617001322677,
-              "p95_response_time": 750.0,
-              "p99_response_time": 1400.0
-            },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 2701.0,
-              "total_requests": 161034,
-              "req_per_pod_time_area": 59.62014068863384,
-              "avg_rps": 89.54870872912399,
-              "avg_response_time": 638.3325789861285,
-              "p95_response_time": 1400.0,
-              "p99_response_time": 3300.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 1797.0,
-              "total_requests": 160280,
-              "req_per_pod_time_area": 89.19309961046189,
-              "avg_rps": 87.58540146769835,
-              "avg_response_time": 661.7673760031877,
-              "p95_response_time": 1600.0,
-              "p99_response_time": 3300.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 1491.0,
-              "total_requests": 164218,
-              "req_per_pod_time_area": 110.13950368879946,
-              "avg_rps": 90.75217778856629,
-              "avg_response_time": 641.5304364410534,
-              "p95_response_time": 1400.0,
-              "p99_response_time": 3300.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 1248.0,
-              "total_requests": 149704,
-              "req_per_pod_time_area": 119.9551282051282,
-              "avg_rps": 83.71993146469343,
-              "avg_response_time": 744.0884316447506,
-              "p95_response_time": 1800.0,
-              "p99_response_time": 5300.0
-            }
-          }
-        },
         "peak": {
           "application": "onlineboutique",
           "scenario": "peak",
           "microservices": [
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1087,7 +201,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1098,7 +212,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1109,7 +223,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1120,7 +234,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1131,7 +245,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1142,7 +256,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1153,7 +267,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1164,7 +278,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1175,7 +289,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1186,7 +300,249 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1318,7 +674,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1329,7 +685,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1340,7 +696,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1351,7 +707,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1362,7 +718,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1373,7 +729,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1384,7 +740,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1395,7 +751,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1406,7 +762,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1417,7 +773,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1428,370 +784,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
+              "method": "K8s-HPA",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1803,65 +796,740 @@
             }
           ],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 1298.0,
-              "total_requests": 484976,
-              "req_per_pod_time_area": 373.633281972265,
-              "avg_rps": 268.1088394942082,
-              "avg_response_time": 1468.6170196510382,
-              "p95_response_time": 2000.0,
-              "p99_response_time": 2400.0
+            "GNNRL-GAT": {
+              "total_requests": 141261.0,
+              "avg_rps": 157.08979034406545,
+              "avg_response_time": 2533.1149735172053,
+              "p95_response_time": 4200.0,
+              "p99_response_time": 5900.0,
+              "pod_time_area": 19458.3,
+              "request_efficiency": 0,
+              "method": "GNNRL-GAT",
+              "theoretical_requests": 360000.0,
+              "achievement_rate": 39.23916666666667
+            },
+            "GNNRL-GCN": {
+              "total_requests": 147744.0,
+              "avg_rps": 164.27261676184216,
+              "avg_response_time": 2415.971481632587,
+              "p95_response_time": 4200.0,
+              "p99_response_time": 5900.0,
+              "pod_time_area": 19879.2,
+              "request_efficiency": 0,
+              "method": "GNNRL-GCN",
+              "theoretical_requests": 360000.0,
+              "achievement_rate": 41.04
+            },
+            "GNNRL-TGN": {
+              "total_requests": 334309.0,
+              "avg_rps": 371.7295416896242,
+              "avg_response_time": 673.6076998258596,
+              "p95_response_time": 1500.0,
+              "p99_response_time": 2100.0,
+              "pod_time_area": 29453.69999999999,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 360000.0,
+              "achievement_rate": 92.86361111111111
             },
             "Gym-HPA": {
+              "total_requests": 141103.0,
+              "avg_rps": 156.95823869730063,
+              "avg_response_time": 2535.7956704325225,
+              "p95_response_time": 4200.0,
+              "p99_response_time": 5200.0,
+              "pod_time_area": 24259.199999999997,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 2137.5,
-              "total_requests": 301658,
-              "req_per_pod_time_area": 141.12654970760235,
-              "avg_rps": 166.63854464034165,
-              "avg_response_time": 2374.6123078642813,
-              "p95_response_time": 3900.0,
-              "p99_response_time": 5800.0
+              "theoretical_requests": 360000.0,
+              "achievement_rate": 39.195277777777775
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 2844.0,
-              "total_requests": 704646,
-              "req_per_pod_time_area": 247.76582278481013,
-              "avg_rps": 390.00896495184867,
+            "K8s-HPA": {
+              "total_requests": 352323.0,
+              "avg_rps": 392.0449147439296,
               "avg_response_time": 522.1087423790458,
               "p95_response_time": 1100.0,
-              "p99_response_time": 1500.0
+              "p99_response_time": 1500.0,
+              "pod_time_area": 42741.30000000001,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "cpu-20",
+              "theoretical_requests": 360000.0,
+              "achievement_rate": 97.86749999999999
+            }
+          }
+        },
+        "offpeak": {
+          "application": "onlineboutique",
+          "scenario": "offpeak",
+          "microservices": [
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
             },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 2354.5,
-              "total_requests": 698256,
-              "req_per_pod_time_area": 296.56232745805903,
-              "avg_rps": 385.8600125261259,
-              "avg_response_time": 521.6008393911416,
-              "p95_response_time": 1100.0,
-              "p99_response_time": 1700.0
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
             },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 2167.0,
-              "total_requests": 696060,
-              "req_per_pod_time_area": 321.20904476234426,
-              "avg_rps": 384.60584722965723,
-              "avg_response_time": 527.68939901282,
-              "p95_response_time": 1100.0,
-              "p99_response_time": 1800.0
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
             },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 1285.0,
-              "total_requests": 393502,
-              "req_per_pod_time_area": 306.2272373540856,
-              "avg_rps": 219.2480528473212,
-              "avg_response_time": 1755.1112933275326,
-              "p95_response_time": 3600.0,
-              "p99_response_time": 6700.0
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GAT",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "Gym-HPA",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "K8s-HPA",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            }
+          ],
+          "summary_statistics": {
+            "GNNRL-GAT": {
+              "total_requests": 86046.0,
+              "avg_rps": 95.70692060164892,
+              "avg_response_time": 479.076566422646,
+              "p95_response_time": 1200.0,
+              "p99_response_time": 2300.0,
+              "pod_time_area": 24995.100000000006,
+              "request_efficiency": 0,
+              "method": "GNNRL-GAT",
+              "theoretical_requests": 90000.0,
+              "achievement_rate": 95.60666666666665
+            },
+            "GNNRL-GCN": {
+              "total_requests": 86981.0,
+              "avg_rps": 96.78919167951187,
+              "avg_response_time": 425.0237367229337,
+              "p95_response_time": 980.0,
+              "p99_response_time": 1700.0,
+              "pod_time_area": 25739.100000000002,
+              "request_efficiency": 0,
+              "method": "GNNRL-GCN",
+              "theoretical_requests": 90000.0,
+              "achievement_rate": 96.64555555555555
+            },
+            "GNNRL-TGN": {
+              "total_requests": 88742.0,
+              "avg_rps": 98.72450986838898,
+              "avg_response_time": 258.9440610213773,
+              "p95_response_time": 830.0,
+              "p99_response_time": 1400.0,
+              "pod_time_area": 27821.399999999998,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 90000.0,
+              "achievement_rate": 98.60222222222222
+            },
+            "Gym-HPA": {
+              "total_requests": 84932.0,
+              "avg_rps": 94.50532116350124,
+              "avg_response_time": 445.4999961833651,
+              "p95_response_time": 1200.0,
+              "p99_response_time": 2000.0,
+              "pod_time_area": 28873.200000000004,
+              "request_efficiency": 0,
+              "method": "Gym-HPA",
+              "theoretical_requests": 90000.0,
+              "achievement_rate": 94.36888888888889
+            },
+            "K8s-HPA": {
+              "total_requests": 80517.0,
+              "avg_rps": 89.58120207958015,
+              "avg_response_time": 638.3325789861285,
+              "p95_response_time": 1400.0,
+              "p99_response_time": 3300.0,
+              "pod_time_area": 39889.8,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "cpu-20",
+              "theoretical_requests": 90000.0,
+              "achievement_rate": 89.46333333333332
             }
           }
         },
@@ -1870,7 +1538,7 @@
           "scenario": "fluctuating",
           "microservices": [
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1881,7 +1549,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1892,7 +1560,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1903,7 +1571,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1914,7 +1582,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1925,7 +1593,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1936,7 +1604,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1947,7 +1615,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1958,7 +1626,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1969,7 +1637,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -1980,7 +1648,249 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2112,7 +2022,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2123,7 +2033,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2134,7 +2044,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2145,7 +2055,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2156,7 +2066,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2167,7 +2077,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2178,7 +2088,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2189,7 +2099,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2200,7 +2110,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2211,7 +2121,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2222,370 +2132,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
+              "method": "K8s-HPA",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2597,65 +2144,66 @@
             }
           ],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 1618.0,
-              "total_requests": 476278,
-              "req_per_pod_time_area": 294.3621755253399,
-              "avg_rps": 260.5035047780635,
-              "avg_response_time": 644.8523240401156,
-              "p95_response_time": 1800.0,
-              "p99_response_time": 2300.0
+            "GNNRL-GAT": {
+              "total_requests": 184431.0,
+              "avg_rps": 205.1282730668273,
+              "avg_response_time": 1062.6969788539104,
+              "p95_response_time": 3000.0,
+              "p99_response_time": 7300.0,
+              "pod_time_area": 27408.300000000003,
+              "request_efficiency": 0,
+              "method": "GNNRL-GAT",
+              "theoretical_requests": 180000.0,
+              "achievement_rate": 102.46166666666667
+            },
+            "GNNRL-GCN": {
+              "total_requests": 172891.0,
+              "avg_rps": 192.3175487066231,
+              "avg_response_time": 1165.7149289938025,
+              "p95_response_time": 5000.0,
+              "p99_response_time": 6800.0,
+              "pod_time_area": 25941.600000000002,
+              "request_efficiency": 0,
+              "method": "GNNRL-GCN",
+              "theoretical_requests": 180000.0,
+              "achievement_rate": 96.05055555555555
+            },
+            "GNNRL-TGN": {
+              "total_requests": 257345.0,
+              "avg_rps": 286.1472569281738,
+              "avg_response_time": 571.7788323581125,
+              "p95_response_time": 1300.0,
+              "p99_response_time": 1900.0,
+              "pod_time_area": 29474.7,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 180000.0,
+              "achievement_rate": 142.96944444444443
             },
             "Gym-HPA": {
+              "total_requests": 241666.0,
+              "avg_rps": 268.8710479874088,
+              "avg_response_time": 725.0820165187591,
+              "p95_response_time": 1700.0,
+              "p99_response_time": 2500.0,
+              "pod_time_area": 31643.09999999999,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 2489.0,
-              "total_requests": 504232,
-              "req_per_pod_time_area": 202.58417034953797,
-              "avg_rps": 275.11620835424077,
-              "avg_response_time": 669.0755425693471,
-              "p95_response_time": 1400.0,
-              "p99_response_time": 2000.0
+              "theoretical_requests": 180000.0,
+              "achievement_rate": 134.2588888888889
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 3052.0,
-              "total_requests": 471978,
-              "req_per_pod_time_area": 154.64547837483616,
-              "avg_rps": 257.63318679263097,
+            "K8s-HPA": {
+              "total_requests": 235989.0,
+              "avg_rps": 262.5397893234869,
               "avg_response_time": 783.220412062105,
               "p95_response_time": 1800.0,
-              "p99_response_time": 2400.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 2386.5,
-              "total_requests": 460740,
-              "req_per_pod_time_area": 193.06096794468888,
-              "avg_rps": 251.49889218379684,
-              "avg_response_time": 865.1584008807391,
-              "p95_response_time": 1800.0,
-              "p99_response_time": 2500.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 2043.0,
-              "total_requests": 455504,
-              "req_per_pod_time_area": 222.95839451786588,
-              "avg_rps": 249.08757969496,
-              "avg_response_time": 880.8037038822831,
-              "p95_response_time": 1900.0,
-              "p99_response_time": 3100.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 1937.5,
-              "total_requests": 465584,
-              "req_per_pod_time_area": 240.3014193548387,
-              "avg_rps": 253.6514319264429,
-              "avg_response_time": 903.1457493915348,
-              "p95_response_time": 1800.0,
-              "p99_response_time": 2500.0
+              "p99_response_time": 2400.0,
+              "pod_time_area": 45551.399999999994,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "cpu-20",
+              "theoretical_requests": 180000.0,
+              "achievement_rate": 131.10500000000002
             }
           }
         },
@@ -2664,7 +2212,7 @@
           "scenario": "rushsale",
           "microservices": [
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2675,7 +2223,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2686,7 +2234,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2697,7 +2245,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2708,7 +2256,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2719,7 +2267,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2730,7 +2278,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2741,7 +2289,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2752,7 +2300,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2763,7 +2311,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2774,7 +2322,249 @@
               "p99_response_time": 0
             },
             {
-              "method": "GNNRL",
+              "method": "GNNRL-GAT",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-GCN",
+              "microservice": "redis-cart",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "adservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "cartservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "checkoutservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "currencyservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "emailservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "frontend",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "paymentservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "productcatalogservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "recommendationservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
+              "microservice": "shippingservice",
+              "pod_time_area": 0,
+              "total_requests": 0,
+              "req_per_pod_time_area": 0,
+              "avg_rps": 0,
+              "avg_response_time": 0,
+              "p95_response_time": 0,
+              "p99_response_time": 0
+            },
+            {
+              "method": "GNNRL-TGN",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2906,7 +2696,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "adservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2917,7 +2707,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "cartservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2928,7 +2718,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "checkoutservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2939,7 +2729,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "currencyservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2950,7 +2740,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "emailservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2961,7 +2751,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "frontend",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2972,7 +2762,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "paymentservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2983,7 +2773,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "productcatalogservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -2994,7 +2784,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "recommendationservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -3005,7 +2795,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
+              "method": "K8s-HPA",
               "microservice": "shippingservice",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -3016,370 +2806,7 @@
               "p99_response_time": 0
             },
             {
-              "method": "K8s-HPA-cpu-20",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-40",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-60",
-              "microservice": "redis-cart",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "adservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "cartservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "checkoutservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "currencyservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "emailservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "frontend",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "paymentservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "productcatalogservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "recommendationservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
-              "microservice": "shippingservice",
-              "pod_time_area": 0,
-              "total_requests": 0,
-              "req_per_pod_time_area": 0,
-              "avg_rps": 0,
-              "avg_response_time": 0,
-              "p95_response_time": 0,
-              "p99_response_time": 0
-            },
-            {
-              "method": "K8s-HPA-cpu-80",
+              "method": "K8s-HPA",
               "microservice": "redis-cart",
               "pod_time_area": 0,
               "total_requests": 0,
@@ -3391,65 +2818,66 @@
             }
           ],
           "summary_statistics": {
-            "GNNRL": {
-              "method": "GNNRL",
-              "pod_time_area": 1982.0,
-              "total_requests": 463070,
-              "req_per_pod_time_area": 233.6377396569122,
-              "avg_rps": 256.97427817985175,
-              "avg_response_time": 898.3475013989759,
-              "p95_response_time": 2200.0,
-              "p99_response_time": 4700.0
+            "GNNRL-GAT": {
+              "total_requests": 179792.0,
+              "avg_rps": 200.05082011939984,
+              "avg_response_time": 1415.9379254694304,
+              "p95_response_time": 3600.0,
+              "p99_response_time": 5400.0,
+              "pod_time_area": 25300.499999999993,
+              "request_efficiency": 0,
+              "method": "GNNRL-GAT",
+              "theoretical_requests": 300000.0,
+              "achievement_rate": 59.93066666666667
+            },
+            "GNNRL-GCN": {
+              "total_requests": 211207.0,
+              "avg_rps": 234.85869106648232,
+              "avg_response_time": 1258.2232819252547,
+              "p95_response_time": 2300.0,
+              "p99_response_time": 3800.0,
+              "pod_time_area": 25450.2,
+              "request_efficiency": 0,
+              "method": "GNNRL-GCN",
+              "theoretical_requests": 300000.0,
+              "achievement_rate": 70.40233333333333
+            },
+            "GNNRL-TGN": {
+              "total_requests": 254377.0,
+              "avg_rps": 282.81834240642957,
+              "avg_response_time": 895.3139900690607,
+              "p95_response_time": 1900.0,
+              "p99_response_time": 2700.0,
+              "pod_time_area": 31293.899999999994,
+              "request_efficiency": 0,
+              "method": "GNNRL-TGN",
+              "theoretical_requests": 300000.0,
+              "achievement_rate": 84.79233333333333
             },
             "Gym-HPA": {
+              "total_requests": 220436.0,
+              "avg_rps": 245.42178990683217,
+              "avg_response_time": 1179.4270503329576,
+              "p95_response_time": 2200.0,
+              "p99_response_time": 3000.0,
+              "pod_time_area": 27678.899999999998,
+              "request_efficiency": 0,
               "method": "Gym-HPA",
-              "pod_time_area": 2551.0,
-              "total_requests": 538708,
-              "req_per_pod_time_area": 211.1752254018032,
-              "avg_rps": 298.6577716988506,
-              "avg_response_time": 809.0461387628058,
-              "p95_response_time": 1700.0,
-              "p99_response_time": 2100.0
+              "theoretical_requests": 300000.0,
+              "achievement_rate": 73.47866666666667
             },
-            "K8s-HPA-cpu-20": {
-              "method": "K8s-HPA-cpu-20",
-              "pod_time_area": 2862.5,
-              "total_requests": 506920,
-              "req_per_pod_time_area": 177.08995633187772,
-              "avg_rps": 281.3936701617321,
+            "K8s-HPA": {
+              "total_requests": 253460.0,
+              "avg_rps": 281.9641385301276,
               "avg_response_time": 920.9734294143952,
               "p95_response_time": 1900.0,
-              "p99_response_time": 2500.0
-            },
-            "K8s-HPA-cpu-40": {
-              "method": "K8s-HPA-cpu-40",
-              "pod_time_area": 2506.0,
-              "total_requests": 521466,
-              "req_per_pod_time_area": 208.08699122106944,
-              "avg_rps": 289.44276993551097,
-              "avg_response_time": 880.0053059510527,
-              "p95_response_time": 1800.0,
-              "p99_response_time": 2300.0
-            },
-            "K8s-HPA-cpu-60": {
-              "method": "K8s-HPA-cpu-60",
-              "pod_time_area": 2388.0,
-              "total_requests": 543048,
-              "req_per_pod_time_area": 227.4070351758794,
-              "avg_rps": 301.6101720131286,
-              "avg_response_time": 805.5917043558456,
-              "p95_response_time": 1600.0,
-              "p99_response_time": 2200.0
-            },
-            "K8s-HPA-cpu-80": {
-              "method": "K8s-HPA-cpu-80",
-              "pod_time_area": 1812.5,
-              "total_requests": 348418,
-              "req_per_pod_time_area": 192.23062068965518,
-              "avg_rps": 193.63273669549636,
-              "avg_response_time": 1382.9711205181345,
-              "p95_response_time": 4300.0,
-              "p99_response_time": 8400.0
+              "p99_response_time": 2500.0,
+              "pod_time_area": 43168.50000000001,
+              "request_efficiency": 0,
+              "method": "K8s-HPA",
+              "config": "cpu-20",
+              "theoretical_requests": 300000.0,
+              "achievement_rate": 84.48666666666666
             }
           }
         }
