@@ -58,7 +58,7 @@ docker --version
 ### 1. Clone Project | 克隆專案
 
 ```bash
-git clone https://github.com/your-repo/GRLScaler.git
+git clone <repository-url>
 cd GRLScaler
 ```
 
@@ -248,12 +248,13 @@ logs/
 ├── gnnrl/                    # GNNRL experiment results | GNNRL 實驗結果
 │   ├── actions/             # Scaling action records | 擴展動作記錄
 │   ├── tensorboard/         # TensorBoard logs | TensorBoard 日誌  
-│   └── [experiment_dirs]/   # Individual experiment directories | 個別實驗目錄
+│   └── models/              # Trained models | 訓練好的模型
 ├── gym-hpa/                 # Gym-HPA experiment results | Gym-HPA 實驗結果
-│   ├── [model_dirs]/        # Trained models | 訓練模型
+│   ├── models/              # Trained models | 訓練模型
 │   └── tensorboard/         # TensorBoard logs | TensorBoard 日誌
-├── k8s_hpa_redis/          # Redis K8s-HPA results | Redis K8s-HPA 結果
-└── visualizations/         # Visualization charts | 視覺化圖表
+├── k8s-hpa/                 # K8s-HPA baseline results | K8s-HPA 基準結果
+├── comparisons/             # Method comparison results | 方法比較結果
+└── runtime/                 # Execution logs | 執行日誌
 ```
 
 ### Generate Comparison Reports | 生成比較報告
@@ -262,8 +263,8 @@ logs/
 # Generate scenario comparison report | 生成場景比較報告
 python generate_scenario_comparison.py
 
-# View statistical summary | 查看統計摘要
-ls scenario_comparisons_fixed/
+# View experimental results | 查看實驗結果
+ls logs/comparisons/
 ```
 
 ### View Training Process with TensorBoard | 使用 TensorBoard 查看訓練過程
@@ -457,7 +458,7 @@ If you have questions or suggestions, please contact us through:
 如有問題或建議，請通過以下方式聯繫：
 
 - GitHub Issues
-- Email: [your-email@example.com]
+- Email: [maintainer-email@example.com]
 
 ---
 
