@@ -23,7 +23,7 @@ GRLScaler provides comparative research on three autoscaling methods:
 
 GRLScaler 提供三種自動擴展方法的比較研究：
 
-1. **GNNRL** - Graph Neural Network Reinforcement Learning, considering inter-service dependencies | 圖神經網絡強化學習，考慮服務間依賴關係
+1. **GNNRL** - Graph Neural Network Reinforcement Learning, considering inter-service dependencies(Our Method) | 圖神經網絡強化學習，考慮服務間依賴關係(本研究提出方法實作)
 2. **Gym-HPA** - Basic reinforcement learning using MLP policy | 基礎強化學習，使用 MLP 策略  
 3. **K8s-HPA** - Native Kubernetes HPA baseline testing | Kubernetes 原生 HPA 基準測試
 
