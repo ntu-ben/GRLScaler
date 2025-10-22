@@ -647,3 +647,7 @@ If you have questions or suggestions, please contact us through:
 **Note**: Please ensure that the Kubernetes cluster and related dependencies are properly configured before running experiments. It is recommended to perform small-scale validation in a test environment first, then execute full experiments.
 
 **注意**：請確保在運行實驗前已正確配置 Kubernetes 集群和相關依賴。建議在測試環境中先進行小規模驗證，再執行完整實驗。
+
+---
+
+Ho, P. H., Chen, H. Y., & Lin, T. N.(2025, December) "Graphpilot: A Temporal Graph Actor-Critic Autoscaler Reducing Degradation of Resource Oscillation in Microservice" Proceedings of the IEEE/ACM 18th International Conference on Utility and Cloud Computing.
