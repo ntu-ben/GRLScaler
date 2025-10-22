@@ -16,7 +16,6 @@
 - [Model Management | 模型管理](#model-management--模型管理)
 - [Troubleshooting | 故障排除](#troubleshooting--故障排除)
 - [Advanced Usage | 進階使用](#advanced-usage--進階使用)
-- [Paper Reproduction | 論文復現](#paper-reproduction--論文復現)
 
 ## 📊 System Overview | 系統概述
 
@@ -599,33 +598,6 @@ kubectl apply -f MicroServiceBenchmark/redis-cluster/redis-cluster.yaml
 # Extend monitoring integration | 擴展監控整合
 # Edit: unified_experiment_manager.py | 編輯: unified_experiment_manager.py
 ```
-
-## 📊 Paper Reproduction | 論文復現
-
-If you want to reproduce the experimental results in the paper:
-
-如果您要復現論文中的實驗結果：
-
-1. **Complete Experimental Setup**: Use the same parameter configuration | **完整實驗設定**：使用相同的參數配置
-2. **Multiple Runs**: Execute each configuration 5 times and take the average | **多次執行**：每個配置執行 5 次取平均值
-3. **Environment Consistency**: Ensure Kubernetes cluster configuration is the same | **環境一致性**：確保 Kubernetes 集群配置相同
-4. **Random Seed**: Set fixed random seed to ensure reproducibility | **隨機種子**：設定固定隨機種子以確保可重複性
-
-```bash
-# Complete paper experiment reproduction | 論文完整實驗復現
-python experiment_planner.py --reproduce-paper --runs 5
-```
-
-## 🤝 Contributing Guide | 貢獻指南
-
-Welcome to contribute code and improvements! Please refer to:
-
-歡迎貢獻代碼和改進！請參考：
-
-1. Fork the project | Fork 專案
-2. Create feature branch | 創建特性分支
-3. Commit changes | 提交改變
-4. Create Pull Request | 發起 Pull Request
 
 ## 📄 License | 授權條款
 
