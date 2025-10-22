@@ -640,7 +640,7 @@ If you have questions or suggestions, please contact us through:
 如有問題或建議，請通過以下方式聯繫：
 
 - GitHub Issues
-- Email: [maintainer-email@example.com]
+- Email: [f11942184@ntu.edu.tw]
 
 ---
 
