@@ -36,18 +36,32 @@ GRLScaler 提供三種自動擴展方法的比較研究：
 
 ### System Requirements | 系統需求
 
+#### Tested Hardware Configuration | 測試硬體配置
+
+本實驗在以下配置上進行測試：
+- **主機 1**: MacBook Pro M4 Pro - 運行 Kubernetes 集群
+- **主機 2**: MacBook Pro M4 Pro - 執行負載測試
+
+#### Software Requirements | 軟體需求
+
 - **Kubernetes Cluster** (v1.20+ recommended) | **Kubernetes 集群** (建議 v1.20+)
 - **Python 3.8+** (3.9-3.11 recommended) | **Python 3.8+** (建議 3.9-3.11)
 - **Docker** 
 - **Istio** (optional, for service mesh monitoring) | **Istio** (可選，用於服務網格監控)
 - **Kiali** (optional, for graph topology visualization) | **Kiali** (可選，用於圖拓撲視覺化)
 
-### Hardware Requirements | 硬體需求
+### Minimum Hardware Requirements | 最低硬體需求
 
 - **CPU**: 4+ cores (8+ cores recommended for live K8s experiments) | **CPU**: 4+ 核心 (實時 K8s 實驗建議 8+ 核心)
 - **RAM**: 8GB+ (16GB+ recommended for K8s cluster) | **RAM**: 8GB+ (K8s 集群建議 16GB+)
 - **Storage**: 20GB+ available space | **儲存空間**: 20GB+ 可用空間
-- **Network**: Stable connection for K8s API calls | **網路**: 穩定連接用於 K8s API 調用
+- **Network**: Stable connection between K8s cluster and load testing machines | **網路**: K8s 集群與負載測試機器間的穩定連接
+
+#### Recommended Setup | 建議配置
+
+對於最佳實驗效果，建議使用雙機配置：
+- **K8s 主機**: 專門運行 Kubernetes 集群和微服務應用
+- **負載測試主機**: 專門執行 Locust 負載測試，避免資源競爭
 
 ### Essential Components | 必要組件
 
@@ -173,7 +187,7 @@ KIALI_URL=http://localhost:20001/kiali
 PROMETHEUS_URL=http://localhost:9090
 
 # Load Testing
-M1_HOST=192.168.1.100  # 分散式測試主機
+LOADTEST_SERVER=192.168.1.100  # 分散式測試主機
 TARGET_HOST=http://k8s.orb.local
 
 # Training Configuration
@@ -311,7 +325,7 @@ If you have multiple machines, you can configure distributed load testing:
 
 ```bash
 # Set distributed host environment variable | 設定分散式主機環境變量
-export M1_HOST=192.168.1.100
+export LOADTEST_SERVER=192.168.1.100
 
 # Run distributed testing | 執行分散式測試
 python run_autoscaling_experiment.py onlineboutique \
@@ -446,7 +460,7 @@ export KIALI_URL=http://kiali.istio-system:20001
 export PROMETHEUS_URL=http://prometheus:9090
 
 # Distributed host IP | 分散式主機 IP
-export M1_HOST=192.168.1.100
+export LOADTEST_SERVER=192.168.1.100
 ```
 
 ## 🐛 Troubleshooting | 故障排除

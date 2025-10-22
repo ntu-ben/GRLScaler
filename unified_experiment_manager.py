@@ -78,7 +78,7 @@ class UnifiedExperimentManager:
         # 從環境變數載入設定
         self.target_host = os.getenv("TARGET_HOST", "http://k8s.orb.local:8080")
         self.locust_run_time = os.getenv("LOCUST_RUN_TIME", "15m")
-        self.m1_host = os.getenv("M1_HOST")
+        self.m1_host = os.getenv("LOADTEST_SERVER")
         self.kiali_url = os.getenv("KIALI_URL", "http://localhost:20001/kiali")
         self.namespace = os.getenv("NAMESPACE_ONLINEBOUTIQUE", "onlineboutique")
         self.redis_namespace = os.getenv("NAMESPACE_REDIS", "redis")
@@ -239,7 +239,7 @@ class UnifiedExperimentManager:
     
     def _check_distributed_testing(self) -> bool:
         """檢查分散式測試環境"""
-        m1_host = os.getenv('M1_HOST')
+        m1_host = os.getenv('LOADTEST_SERVER')
         if not m1_host:
             return False
         
@@ -625,7 +625,7 @@ class UnifiedExperimentManager:
     def _run_remote_locust(self, scenario: str, tag: str, out_dir: Path) -> bool:
         """運行遠端 Locust 測試"""
         host = self.m1_host.rstrip("/")
-        self.logger.info(f"🔗 分散式測試: M1_HOST={host}")
+        self.logger.info(f"🔗 分散式測試: LOADTEST_SERVER={host}")
         self.logger.info(f"🚀 觸發遠端 Locust {scenario}")
         
         # 自動判斷環境類型

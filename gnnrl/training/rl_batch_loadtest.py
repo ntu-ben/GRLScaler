@@ -6,7 +6,7 @@ rl_batch_loadtest.py  v5.0  (2025-06-23)
 ────────────────────────────────────────────────────────────────────────────
 功能摘要：
 • 支持三種實驗模式：gym_hpa, k8s_hpa (baseline), gnnrl
-• 整合分散式 Locust 測試環境 (M1_HOST 遠端代理)
+• 整合分散式 Locust 測試環境 (LOADTEST_SERVER 遠端代理)
 • 自動協調實驗訓練與負載測試的時序
 • 統一日誌管理和結果匯總
 • 支持多種負載測試情境：offpeak, rushsale, peak, fluctuating
@@ -17,7 +17,7 @@ rl_batch_loadtest.py  v5.0  (2025-06-23)
 • gnnrl: 圖神經網路強化學習
 
 分散式測試：
-• 遠端 Locust 代理 (M1_HOST) 用於分散負載
+• 遠端 Locust 代理 (LOADTEST_SERVER) 用於分散負載
 • 本地 fallback 機制
 • 同步訓練過程與負載測試
 """
@@ -174,8 +174,8 @@ def run_distributed_locust(scenario: str, tag: str, remote: bool, out_dir: Path,
         logging.warning("Training process terminated before loadtest %s", scenario)
     
     if remote:
-        host = os.environ["M1_HOST"].rstrip("/")
-        logging.info("🔗 分散式測試: M1_HOST=%s", host)
+        host = os.environ["LOADTEST_SERVER"].rstrip("/")
+        logging.info("🔗 分散式測試: LOADTEST_SERVER=%s", host)
         logging.info("🚀 觸發遠端 Locust %s 在 %s", scenario, host)
         payload = {
             "tag": tag,
@@ -461,9 +461,9 @@ def main() -> None:
             rl = subprocess.Popen(rl_cmd, cwd=rl_cwd)
 
         # 3-5 統一實驗與分散式測試協調
-        from_locust_remote = bool(os.getenv("M1_HOST"))
+        from_locust_remote = bool(os.getenv("LOADTEST_SERVER"))
         logging.info("🔧 測試模式: %s", 
-                    f"分散式 (代理: {os.getenv('M1_HOST')})" if from_locust_remote else "本地")
+                    f"分散式 (代理: {os.getenv('LOADTEST_SERVER')})" if from_locust_remote else "本地")
         
         # 為不同實驗類型設定同步策略
         experiment_sync = {"training_proc": rl} if 'rl' in locals() else None

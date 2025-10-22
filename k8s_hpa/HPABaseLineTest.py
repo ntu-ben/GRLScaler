@@ -133,10 +133,10 @@ def wait_frontend_ready():
 def run_locust_once(scenario: str, script: Path, out_dir: Path):
     """Run Locust exactly once, optionally via the remote agent."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    host = os.getenv("M1_HOST")
+    host = os.getenv("LOADTEST_SERVER")
     if host:
         host = host.rstrip("/")
-        logging.info("M1_HOST=%s", host)
+        logging.info("LOADTEST_SERVER=%s", host)
         tag = f"hpa_{scenario}_{int(time.time())}"
         payload = {
             "tag": tag,

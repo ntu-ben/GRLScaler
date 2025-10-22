@@ -96,7 +96,7 @@ loadtest:
   # 分散式測試配置
   distributed:
     enabled: true
-    master_host_env: "M1_HOST"
+    master_host_env: "LOADTEST_SERVER"
     fallback_to_local: true
     timeout_checks: 720
     cooldown_between_scenarios: 60
