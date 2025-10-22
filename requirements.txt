@@ -19,3 +19,5 @@ tensorflow~=2.16.1
 sb3_contrib~=1.8.0
 torch-geometric
 httpx
+locust
+dotenv

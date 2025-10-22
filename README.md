@@ -9,11 +9,14 @@
 - [System Overview | 系統概述](#system-overview--系統概述)
 - [Environment Setup | 環境準備](#environment-setup--環境準備)
 - [Installation Guide | 安裝指南](#installation-guide--安裝指南)
+- [Dataset Information | 數據集說明](#dataset-information--數據集說明)
+- [Configuration | 配置](#configuration--配置)
 - [Experiment Reproduction | 實驗復現](#experiment-reproduction--實驗復現)
-- [Supported Methods | 支援方法](#supported-methods--支援方法)
-- [Test Environments | 測試環境](#test-environments--測試環境)
 - [Results Analysis | 結果分析](#results-analysis--結果分析)
+- [Model Management | 模型管理](#model-management--模型管理)
 - [Troubleshooting | 故障排除](#troubleshooting--故障排除)
+- [Advanced Usage | 進階使用](#advanced-usage--進階使用)
+- [Paper Reproduction | 論文復現](#paper-reproduction--論文復現)
 
 ## 📊 System Overview | 系統概述
 
@@ -27,7 +30,7 @@ GRLScaler 提供三種自動擴展方法的比較研究：
 
 ### Supported Test Environments | 支援的測試環境
 
-- **OnlineBoutique** - Google microservices e-commerce platform (10 microservices) | Google 微服務電商平台 (10個微服務)
+- **OnlineBoutique** - Google microservices e-commerce platform (11 microservices) | Google 微服務電商平台 (11個微服務)
 - **Redis** - Master-Slave in-memory database cluster | Master-Slave 內存數據庫集群
 
 ## 🛠️ Environment Setup | 環境準備
@@ -35,10 +38,17 @@ GRLScaler 提供三種自動擴展方法的比較研究：
 ### System Requirements | 系統需求
 
 - **Kubernetes Cluster** (v1.20+ recommended) | **Kubernetes 集群** (建議 v1.20+)
-- **Python 3.8+**
+- **Python 3.8+** (3.9-3.11 recommended) | **Python 3.8+** (建議 3.9-3.11)
 - **Docker** 
 - **Istio** (optional, for service mesh monitoring) | **Istio** (可選，用於服務網格監控)
 - **Kiali** (optional, for graph topology visualization) | **Kiali** (可選，用於圖拓撲視覺化)
+
+### Hardware Requirements | 硬體需求
+
+- **CPU**: 4+ cores (8+ cores recommended for live K8s experiments) | **CPU**: 4+ 核心 (實時 K8s 實驗建議 8+ 核心)
+- **RAM**: 8GB+ (16GB+ recommended for K8s cluster) | **RAM**: 8GB+ (K8s 集群建議 16GB+)
+- **Storage**: 20GB+ available space | **儲存空間**: 20GB+ 可用空間
+- **Network**: Stable connection for K8s API calls | **網路**: 穩定連接用於 K8s API 調用
 
 ### Essential Components | 必要組件
 
@@ -65,13 +75,19 @@ cd GRLScaler
 ### 2. Install Dependencies | 安裝依賴
 
 ```bash
-# Install Python dependencies | 安裝 Python 依賴
+# Install core Python dependencies | 安裝核心 Python 依賴
 pip install -r requirements.txt
+
+# Install additional dependencies for GNNRL | 安裝 GNNRL 額外依賴
+pip install torch-geometric httpx locust
 
 # Install gym-hpa environment | 安裝 gym-hpa 環境
 cd gym-hpa && pip install -e . && cd ..
 
-# Install gnnrl modules | 安裝 gnnrl 模組
+# Install gnnrl environment modules | 安裝 gnnrl 環境模組
+cd gnnrl/environments && pip install -e . && cd ../..
+
+# Install main gnnrl modules | 安裝主要 gnnrl 模組
 pip install -e .
 ```
 
@@ -106,6 +122,75 @@ kubectl apply -f macK8S/istio/
 # Deploy Prometheus monitoring | 部署 Prometheus 監控
 kubectl apply -f macK8S/prometheus/
 ```
+
+## 📂 Dataset Information | 數據集說明
+
+### Pre-collected Datasets | 預收集數據集
+
+本項目包含預收集的實驗數據集，用於離線訓練和測試：
+
+- **OnlineBoutique Dataset**: 
+  - 位置: `gnnrl/data/datasets/real/onlineboutique/`
+  - 包含真實 K8s 環境收集的指標數據
+  - 主要文件: `online_boutique_gym_observation.csv`
+  - 大小: ~500MB, 包含 10000+ 樣本
+  - 包含 11 個微服務的性能指標、拓撲關係和擴展動作
+
+- **Redis Dataset**:
+  - 位置: `gnnrl/data/datasets/real/redis/`
+  - Redis 集群性能指標數據
+  - 主要文件: `redis_gym_observation.csv`
+  - 大小: ~200MB, 包含 5000+ 樣本
+  - 包含 Master-Slave 配置的性能數據
+
+### Dataset Structure | 數據集結構
+
+```
+gnnrl/data/
+├── datasets/
+│   └── real/
+│       ├── onlineboutique/
+│       │   └── online_boutique_gym_observation.csv
+│       └── redis/
+│           └── redis_gym_observation.csv
+├── edges.json          # 服務拓撲邊信息
+└── nodes_stat.json     # 節點統計信息
+```
+
+## ⚙️ Configuration | 配置
+
+### Environment Configuration | 環境配置
+
+創建 `.env` 文件在項目根目錄：
+
+```bash
+# Kubernetes Configuration
+KUBE_HOST=http://localhost:8001
+NAMESPACE_ONLINEBOUTIQUE=onlineboutique
+NAMESPACE_REDIS=redis
+
+# Monitoring URLs
+KIALI_URL=http://localhost:20001/kiali
+PROMETHEUS_URL=http://localhost:9090
+
+# Load Testing
+M1_HOST=192.168.1.100  # 分散式測試主機
+TARGET_HOST=http://k8s.orb.local
+
+# Training Configuration
+```
+
+### Version Compatibility | 版本相容性
+
+#### Tested Environments | 測試環境
+- **Kubernetes**: v1.20+ to v1.28
+- **Python**: 3.8, 3.9, 3.10, 3.11
+- **PyTorch**: 1.11.0+ to 2.0.0
+
+#### Known Issues | 已知問題
+- Python 3.12: 部分依賴尚未支援 
+- Kubernetes 1.29+: 需要更新 API 版本
+- macOS M1/M2: 需要使用 conda 安裝 torch-geometric
 
 ## 🔬 Experiment Reproduction | 實驗復現
 
@@ -289,6 +374,47 @@ Experiments automatically record the following metrics:
 - **Resource Utilization** - CPU/Memory usage | **資源使用率** - CPU/內存使用情況
 - **Convergence Time** - Training convergence speed | **收斂時間** - 訓練收斂速度
 
+## 🗂️ Model Management | 模型管理
+
+### Trained Models Location | 訓練模型位置
+
+```
+logs/models/
+├── gnnrl_gat_online_boutique_latency_k8s_True_steps_5000.zip
+├── gnnrl_tgn_redis_latency_k8s_True_steps_5000.zip  
+├── ppo_env_online_boutique_goal_latency_k8s_True_totalSteps_5000.zip
+└── [other trained models...]
+```
+
+### Model Naming Convention | 模型命名規則
+
+- **GNNRL**: `gnnrl_{model}_{env}_{goal}_k8s_{mode}_steps_{steps}.zip`
+- **Gym-HPA**: `{alg}_env_{env}_goal_{goal}_k8s_{mode}_totalSteps_{steps}.zip`
+
+Where | 其中：
+- `{model}`: gat, gcn, tgn
+- `{env}`: online_boutique, redis  
+- `{goal}`: latency, cost
+- `{mode}`: True (live K8s), False (simulation)
+- `{alg}`: ppo, a2c
+
+### Model Loading Example | 模型載入範例
+
+```python
+from stable_baselines3 import PPO
+from gnnrl.core.envs import OnlineBoutique
+
+# Load environment
+env = OnlineBoutique(k8s=True, use_graph=True)
+
+# Load trained model
+model = PPO.load("logs/models/gnnrl_gat_online_boutique_latency_k8s_True_steps_5000")
+
+# Use model for prediction
+obs, info = env.reset()
+action, _states = model.predict(obs, deterministic=True)
+```
+
 ## 🔧 配置說明
 
 ### 實驗配置文件
@@ -366,6 +492,62 @@ kubectl get pods -n istio-system
 
 # Check Kiali service | 檢查 Kiali 服務
 kubectl get svc -n istio-system
+```
+
+#### 5. Python Environment Issues | Python 環境問題
+
+```bash
+# 如果遇到 gymnasium/gym 版本衝突
+pip uninstall gym gymnasium
+pip install gymnasium>=0.29
+
+# 如果遇到 torch-geometric 安裝問題  
+pip install torch-scatter torch-sparse torch-cluster torch-spline-conv -f https://data.pyg.org/whl/torch-1.11.0+cpu.html
+
+# macOS M1/M2 特殊安裝方式
+conda install pytorch torchvision torchaudio -c pytorch
+conda install pyg -c pyg
+```
+
+#### 6. Model Loading Errors | 模型載入錯誤
+
+```bash
+# 檢查模型文件是否存在
+ls -la logs/models/
+
+# 檢查模型格式是否正確
+python -c "from stable_baselines3 import PPO; model = PPO.load('logs/models/model_name')"
+
+# 檢查模型相容性
+python -c "import torch; print(torch.__version__)"
+```
+
+#### 7. Permission Issues | 權限問題
+
+```bash
+# 檢查 kubectl 權限
+kubectl auth can-i create pods --namespace=onlineboutique
+
+# 檢查文件權限
+chmod +x run_autoscaling_experiment.py
+
+# 檢查 Docker 權限 (Linux)
+sudo usermod -aG docker $USER
+```
+
+#### 8. Network and Port Issues | 網路和端口問題
+
+```bash
+# 檢查端口占用
+lsof -i :8001  # kubectl proxy
+lsof -i :9090  # Prometheus
+lsof -i :20001 # Kiali
+
+# 檢查服務可達性
+curl http://localhost:8001/api/v1/namespaces/onlineboutique/services/frontend/proxy/
+
+# 檢查負載測試連接
+curl http://k8s.orb.local/cart
 ```
 
 ### Log Viewing | 日誌查看
