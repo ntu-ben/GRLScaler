@@ -9,7 +9,6 @@
 - [System Overview | 系統概述](#system-overview--系統概述)
 - [Environment Setup | 環境準備](#environment-setup--環境準備)
 - [Installation Guide | 安裝指南](#installation-guide--安裝指南)
-- [Dataset Information | 數據集說明](#dataset-information--數據集說明)
 - [Configuration | 配置](#configuration--配置)
 - [Experiment Reproduction | 實驗復現](#experiment-reproduction--實驗復現)
 - [Results Analysis | 結果分析](#results-analysis--結果分析)
@@ -134,40 +133,6 @@ kubectl apply -f macK8S/istio/
 
 # Deploy Prometheus monitoring | 部署 Prometheus 監控
 kubectl apply -f macK8S/prometheus/
-```
-
-## 📂 Dataset Information | 數據集說明
-
-### Pre-collected Datasets | 預收集數據集
-
-本項目包含預收集的實驗數據集，用於離線訓練和測試：
-
-- **OnlineBoutique Dataset**: 
-  - 位置: `gnnrl/data/datasets/real/onlineboutique/`
-  - 包含真實 K8s 環境收集的指標數據
-  - 主要文件: `online_boutique_gym_observation.csv`
-  - 大小: ~500MB, 包含 10000+ 樣本
-  - 包含 11 個微服務的性能指標、拓撲關係和擴展動作
-
-- **Redis Dataset**:
-  - 位置: `gnnrl/data/datasets/real/redis/`
-  - Redis 集群性能指標數據
-  - 主要文件: `redis_gym_observation.csv`
-  - 大小: ~200MB, 包含 5000+ 樣本
-  - 包含 Master-Slave 配置的性能數據
-
-### Dataset Structure | 數據集結構
-
-```
-gnnrl/data/
-├── datasets/
-│   └── real/
-│       ├── onlineboutique/
-│       │   └── online_boutique_gym_observation.csv
-│       └── redis/
-│           └── redis_gym_observation.csv
-├── edges.json          # 服務拓撲邊信息
-└── nodes_stat.json     # 節點統計信息
 ```
 
 ## ⚙️ Configuration | 配置
