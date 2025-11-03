@@ -1,8 +1,8 @@
-# GRLScaler - Graph Reinforcement Learning for Kubernetes Autoscaling
+# GraphPilot - Graph Reinforcement Learning for Kubernetes Autoscaling
 
-**GRLScaler** is a Kubernetes autoscaling system based on Graph Neural Network Reinforcement Learning, supporting intelligent scaling for microservices and distributed applications.
+**GraphPilot** is a Kubernetes autoscaling system based on Graph Neural Network Reinforcement Learning, supporting intelligent scaling for microservices and distributed applications.
 
-**GRLScaler** 是一個基於圖神經網絡強化學習的 Kubernetes 自動擴展系統，支援微服務和分散式應用的智能擴展。
+**GraphPilot** 是一個基於圖神經網絡強化學習的 Kubernetes 自動擴展系統，支援微服務和分散式應用的智能擴展。
 
 ## 📋 Table of Contents | 目錄
 
@@ -601,4 +601,6 @@ If you have questions or suggestions, please contact us through:
 
 ---
 
-Ho, P. H., Chen, H. Y., & Lin, T. N.(2025, December) "Graphpilot: A Temporal Graph Actor-Critic Autoscaler Reducing Degradation of Resource Oscillation in Microservice" Proceedings of the IEEE/ACM 18th International Conference on Utility and Cloud Computing.
+Citation:
+
+Po-Han Ho, Hong-Yen Chen, and Tsung-Nan Lin. 2025. Graphpilot: A Temporal Graph Actor-Critic Autoscaler Reducing Degradation of Resource Oscillation in Microservice. In 2025 IEEE/ACM 18th International Conference on Utility and Cloud Computing (UCC '25), December 01--04, 2025, France, France. ACM, New York, NY, USA 10 Pages. https://doi.org/10.1145/3773274.3774260
